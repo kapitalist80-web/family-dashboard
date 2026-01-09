@@ -1,0 +1,784 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Familienkalender</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, sans-serif;
+            overflow: hidden;
+            background: #000;
+            color: white;
+        }
+
+        #background {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            object-fit: cover;
+            z-index: -1;
+            transition: opacity 1s ease-in-out;
+        }
+
+        .overlay {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: linear-gradient(to bottom, rgba(0,0,0,0.4) 0%, rgba(0,0,0,0.2) 50%, rgba(0,0,0,0.4) 100%);
+            z-index: 0;
+        }
+
+        .container {
+            position: relative;
+            z-index: 1;
+            width: 100vw;
+            height: 100vh;
+            display: flex;
+            flex-direction: column;
+            padding: 20px;
+        }
+
+        /* Header */
+        .header {
+            display: flex;
+            justify-content: space-between;
+            align-items: flex-start;
+            margin-bottom: 30px;
+        }
+
+        .time-date {
+            text-align: left;
+        }
+
+        .time {
+            font-size: 5rem;
+            font-weight: 300;
+            line-height: 1;
+            text-shadow: 2px 2px 8px rgba(0,0,0,0.8);
+        }
+
+        .date {
+            font-size: 1.5rem;
+            margin-top: 5px;
+            opacity: 0.9;
+            text-shadow: 1px 1px 4px rgba(0,0,0,0.8);
+        }
+
+        .weather {
+            text-align: right;
+            min-width: 300px;
+        }
+
+        .current-weather {
+            display: flex;
+            align-items: center;
+            justify-content: flex-end;
+            gap: 15px;
+            margin-bottom: 15px;
+        }
+
+        .temp {
+            font-size: 3.5rem;
+            font-weight: 300;
+            text-shadow: 2px 2px 8px rgba(0,0,0,0.8);
+        }
+
+        .weather-icon {
+            width: 80px;
+            height: 80px;
+            filter: drop-shadow(2px 2px 4px rgba(0,0,0,0.8));
+        }
+
+        .weather-details {
+            font-size: 0.95rem;
+            opacity: 0.9;
+            text-shadow: 1px 1px 4px rgba(0,0,0,0.8);
+        }
+
+        .forecast {
+            display: flex;
+            gap: 10px;
+            justify-content: flex-end;
+            margin-top: 10px;
+        }
+
+        .forecast-day {
+            background: rgba(0,0,0,0.25);
+            backdrop-filter: blur(3px);
+            padding: 8px 12px;
+            border-radius: 8px;
+            text-align: center;
+            min-width: 70px;
+        }
+
+        .forecast-day-name {
+            font-size: 0.85rem;
+            margin-bottom: 5px;
+            opacity: 0.9;
+        }
+
+        .forecast-icon {
+            width: 40px;
+            height: 40px;
+            margin: 5px auto;
+        }
+
+        .forecast-temp {
+            font-size: 1.1rem;
+            font-weight: 500;
+        }
+
+        .forecast-rain {
+            font-size: 0.75rem;
+            opacity: 0.8;
+            margin-top: 3px;
+        }
+
+        /* News Ticker */
+        .news-ticker {
+            position: fixed;
+            bottom: 0;
+            left: 0;
+            right: 0;
+            background: rgba(0,0,0,0.6);
+            backdrop-filter: blur(5px);
+            padding: 15px 20px;
+            z-index: 10;
+            overflow: hidden;
+            height: 70px;
+        }
+
+        .news-content {
+            display: flex;
+            flex-direction: column;
+            gap: 8px;
+        }
+
+        .news-item {
+            font-size: 0.95rem;
+            line-height: 1.4;
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
+            opacity: 0;
+            transition: opacity 0.5s;
+        }
+
+        .news-item.active {
+            opacity: 1;
+        }
+
+        .news-item strong {
+            color: #4285f4;
+            margin-right: 10px;
+        }
+
+        /* ÖV-Abfahrten */
+        .transport-panel {
+            position: fixed;
+            bottom: 70px; /* Über dem News-Ticker */
+            left: 20px;
+            right: 20px;
+            background: rgba(0,0,0,0.4);
+            backdrop-filter: blur(5px);
+            border-radius: 12px;
+            padding: 12px 15px;
+            z-index: 5;
+        }
+
+        .transport-header {
+            font-size: 1rem;
+            font-weight: 600;
+            margin-bottom: 10px;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        .transport-header::before {
+            content: "🚌";
+        }
+
+        .transport-stations {
+            display: flex;
+            gap: 20px;
+            overflow-x: auto;
+        }
+
+        .station-group {
+            flex: 1;
+            min-width: 0;
+        }
+
+        .station-name {
+            font-size: 0.8rem;
+            font-weight: 600;
+            color: #fbbf24;
+            margin-bottom: 6px;
+            padding-bottom: 4px;
+            border-bottom: 1px solid rgba(255,255,255,0.2);
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
+        }
+
+        .departures-list {
+            display: flex;
+            flex-direction: column;
+            gap: 3px;
+        }
+
+        .departure {
+            display: flex;
+            align-items: center;
+            padding: 4px 0;
+            font-size: 0.8rem;
+        }
+
+        .departure-time {
+            font-weight: 600;
+            min-width: 45px;
+            color: #4ade80;
+        }
+
+        .departure-time.delayed {
+            color: #f87171;
+        }
+
+        .departure-line {
+            background: rgba(255,255,255,0.2);
+            padding: 1px 6px;
+            border-radius: 4px;
+            font-weight: 600;
+            min-width: 40px;
+            text-align: center;
+            margin-right: 8px;
+            font-size: 0.75rem;
+        }
+
+        .departure-line.tram {
+            background: rgba(59, 130, 246, 0.6);
+        }
+
+        .departure-line.bus {
+            background: rgba(168, 85, 247, 0.6);
+        }
+
+        .departure-line.train {
+            background: rgba(239, 68, 68, 0.6);
+        }
+
+        .departure-destination {
+            flex: 1;
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
+        }
+
+        .departure-delay {
+            font-size: 0.7rem;
+            color: #f87171;
+            margin-left: 4px;
+        }
+
+        .departure-minutes {
+            font-size: 0.7rem;
+            opacity: 0.7;
+            min-width: 35px;
+            text-align: right;
+        }
+
+        /* Kalender */
+        .calendar {
+            flex: 0 1 auto;
+            max-height: 70vh;
+            background: rgba(0,0,0,0.2);
+            border-radius: 12px;
+            padding: 20px;
+            overflow: hidden;
+        }
+
+        .month-header {
+            font-size: 2rem;
+            text-align: center;
+            margin-bottom: 20px;
+            text-shadow: 1px 1px 4px rgba(0,0,0,0.8);
+        }
+
+        .calendar-grid {
+            display: grid;
+            grid-template-columns: repeat(7, 1fr);
+            grid-template-rows: auto repeat(2, 1fr);
+            gap: 2px;
+            height: calc(100% - 60px);
+        }
+
+        .weekday-header {
+            text-align: center;
+            font-weight: 600;
+            padding: 10px 5px;
+            font-size: 0.9rem;
+            background: rgba(255,255,255,0.1);
+        }
+
+        .calendar-day {
+            background: rgba(255,255,255,0.05);
+            padding: 8px;
+            min-height: 120px;
+            display: flex;
+            flex-direction: column;
+            position: relative;
+            overflow: hidden;
+        }
+
+        .calendar-day.other-month {
+            opacity: 0.3;
+        }
+
+        .calendar-day.today {
+            background: rgba(220, 38, 38, 0.6);
+            font-weight: bold;
+        }
+
+        .day-number {
+            font-size: 1.3rem;
+            margin-bottom: 5px;
+            font-weight: 500;
+        }
+
+        .events {
+            flex: 1;
+            overflow: hidden;
+        }
+
+        .event {
+            background: rgba(66, 133, 244, 0.8);
+            padding: 5px 7px;
+            margin: 3px 0;
+            border-radius: 3px;
+            font-size: 0.8rem;
+            border-left: 3px solid;
+            overflow: hidden;
+            display: -webkit-box;
+            -webkit-line-clamp: 2;
+            -webkit-box-orient: vertical;
+            line-height: 1.4;
+            min-height: 2.8em;
+        }
+
+        .event-time {
+            font-size: 0.7rem;
+            opacity: 0.9;
+            display: inline;
+        }
+    </style>
+</head>
+<body>
+    <img id="background" src="" alt="">
+    <div class="overlay"></div>
+    
+    <div class="container">
+        <div class="header">
+            <div class="time-date">
+                <div class="time" id="time">10:20</div>
+                <div class="date" id="date">Samstag, November 22</div>
+            </div>
+            
+            <div class="weather">
+                <div class="current-weather">
+                    <div>
+                        <div class="temp" id="currentTemp">-2°</div>
+                        <div class="weather-details" id="weatherDetails">
+                            Gefühlt -5° | 85% | Niedrig
+                        </div>
+                    </div>
+                    <img class="weather-icon" id="weatherIcon" src="" alt="">
+                </div>
+                <div class="forecast" id="forecast"></div>
+            </div>
+        </div>
+
+        <div class="calendar">
+            <div class="month-header" id="monthHeader">November 2025</div>
+            <div class="calendar-grid" id="calendarGrid"></div>
+        </div>
+
+        <!-- ÖV-Abfahrten Panel -->
+        <div class="transport-panel" id="transportPanel">
+            <div class="transport-header">Nächste Abfahrten</div>
+            <div id="transportContent">
+                <div style="opacity: 0.6; font-size: 0.9rem;">Lade Abfahrten...</div>
+            </div>
+        </div>
+    </div>
+
+    <!-- News Ticker -->
+    <div class="news-ticker">
+        <div class="news-content" id="newsContent">
+            <div class="news-item" id="newsItem1"></div>
+            <div class="news-item" id="newsItem2"></div>
+        </div>
+    </div>
+
+    <script>
+        // Konfiguration
+        const API_BASE = window.location.origin;
+        let currentImageIndex = 0;
+        let images = [];
+        let events = [];
+        let config = {
+            images: { changeInterval: 120000 }
+        };
+        let newsItems = [];
+        let currentNewsIndex = 0;
+
+        // Zeit und Datum aktualisieren
+        function updateTime() {
+            const now = new Date();
+            const timeStr = now.toLocaleTimeString('de-CH', { hour: '2-digit', minute: '2-digit' });
+            const dateStr = now.toLocaleDateString('de-CH', { 
+                weekday: 'long', 
+                month: 'long', 
+                day: 'numeric' 
+            });
+            
+            document.getElementById('time').textContent = timeStr;
+            document.getElementById('date').textContent = dateStr;
+        }
+
+        // Wetter laden
+        async function loadWeather() {
+            try {
+                const response = await fetch(`${API_BASE}/api/weather`);
+                const data = await response.json();
+                
+                if (data.error) {
+                    console.error('Wetter-Fehler:', data.error);
+                    return;
+                }
+
+                // Aktuelles Wetter
+                document.getElementById('currentTemp').textContent = `${data.current.temp}°`;
+                document.getElementById('weatherDetails').innerHTML = `
+                    Gefühlt ${data.current.feels_like}° | ${data.current.humidity}% | ${data.current.wind} km/h
+                `;
+                
+                const iconUrl = `https://openweathermap.org/img/wn/${data.current.icon}@2x.png`;
+                document.getElementById('weatherIcon').src = iconUrl;
+
+                // Prognose
+                const forecastHtml = data.forecast.map(day => {
+                    const date = new Date(day.date);
+                    const dayName = date.toLocaleDateString('de-CH', { weekday: 'short' });
+                    const icon = `https://openweathermap.org/img/wn/${day.icon}.png`;
+                    
+                    return `
+                        <div class="forecast-day">
+                            <div class="forecast-day-name">${dayName}</div>
+                            <img class="forecast-icon" src="${icon}" alt="">
+                            <div class="forecast-temp">${day.temp}°</div>
+                            ${day.rain > 0 ? `<div class="forecast-rain">${day.rain}mm</div>` : ''}
+                        </div>
+                    `;
+                }).join('');
+                
+                document.getElementById('forecast').innerHTML = forecastHtml;
+            } catch (error) {
+                console.error('Fehler beim Laden des Wetters:', error);
+            }
+        }
+
+        // Kalender laden
+        async function loadCalendar() {
+            try {
+                const response = await fetch(`${API_BASE}/api/calendars`);
+                events = await response.json();
+                renderCalendar();
+            } catch (error) {
+                console.error('Fehler beim Laden des Kalenders:', error);
+            }
+        }
+
+        // Kalender rendern - 2 Wochen Ansicht
+        function renderCalendar() {
+            const now = new Date();
+            
+            // Berechne Start der aktuellen Woche (Montag)
+            const currentDay = now.getDay();
+            const diff = currentDay === 0 ? -6 : 1 - currentDay; // Wenn Sonntag, dann -6, sonst 1-currentDay
+            const weekStart = new Date(now);
+            weekStart.setDate(now.getDate() + diff);
+            weekStart.setHours(0, 0, 0, 0);
+            
+            // Ende der zweiten Woche (13 Tage später = 2 Wochen)
+            const weekEnd = new Date(weekStart);
+            weekEnd.setDate(weekStart.getDate() + 13);
+            
+            // Header mit Datumsbereich
+            const startStr = weekStart.toLocaleDateString('de-CH', { day: 'numeric', month: 'long' });
+            const endStr = weekEnd.toLocaleDateString('de-CH', { day: 'numeric', month: 'long', year: 'numeric' });
+            document.getElementById('monthHeader').textContent = `${startStr} - ${endStr}`;
+
+            const grid = document.getElementById('calendarGrid');
+            grid.innerHTML = '';
+
+            // Wochentag-Header
+            const weekdays = ['Mo', 'Di', 'Mi', 'Do', 'Fr', 'Sa', 'So'];
+            weekdays.forEach(day => {
+                const header = document.createElement('div');
+                header.className = 'weekday-header';
+                header.textContent = day;
+                grid.appendChild(header);
+            });
+
+            // Zeige 2 Wochen (14 Tage)
+            for (let i = 0; i < 14; i++) {
+                const date = new Date(weekStart);
+                date.setDate(weekStart.getDate() + i);
+                const cell = createDayCell(date, false);
+                grid.appendChild(cell);
+            }
+        }
+
+        // Kalender-Tag-Zelle erstellen
+        function createDayCell(date, otherMonth) {
+            const cell = document.createElement('div');
+            cell.className = 'calendar-day';
+            
+            if (otherMonth) {
+                cell.classList.add('other-month');
+            }
+
+            const today = new Date();
+            if (date.toDateString() === today.toDateString()) {
+                cell.classList.add('today');
+            }
+
+            // Tag-Nummer
+            const dayNumber = document.createElement('div');
+            dayNumber.className = 'day-number';
+            dayNumber.textContent = date.getDate();
+            cell.appendChild(dayNumber);
+
+            // Events für diesen Tag
+            const eventsContainer = document.createElement('div');
+            eventsContainer.className = 'events';
+            
+            const dayEvents = events.filter(event => {
+                const eventDate = new Date(event.start);
+                return eventDate.toDateString() === date.toDateString();
+            });
+
+            dayEvents.forEach(event => {
+                const eventEl = document.createElement('div');
+                eventEl.className = 'event';
+                eventEl.style.borderLeftColor = event.color;
+                eventEl.style.background = `${event.color}dd`;
+                
+                const eventTime = new Date(event.start);
+                const timeStr = event.allDay ? '' : 
+                    `<span class="event-time">${eventTime.toLocaleTimeString('de-CH', { hour: '2-digit', minute: '2-digit' })}</span> `;
+                
+                eventEl.innerHTML = `${timeStr}${event.title}`;
+                eventsContainer.appendChild(eventEl);
+            });
+
+            cell.appendChild(eventsContainer);
+            return cell;
+        }
+
+        // Hintergrundbild ändern
+        async function changeBackground() {
+            if (images.length === 0) {
+                await loadImages();
+            }
+            
+            if (images.length === 0) return;
+            
+            const img = document.getElementById('background');
+            const nextIndex = (currentImageIndex + 1) % images.length;
+            
+            // Crossfade-Effekt
+            img.style.opacity = 0;
+            setTimeout(() => {
+                img.src = images[nextIndex].url || images[nextIndex];
+                img.style.opacity = 1;
+                currentImageIndex = nextIndex;
+            }, 1000);
+        }
+
+        // Bilder vom Server laden
+        async function loadImages() {
+            try {
+                const response = await fetch(`${API_BASE}/api/images`);
+                const imageData = await response.json();
+                images = imageData.map(img => img.url || img);
+                
+                if (images.length > 0 && document.getElementById('background').src === '') {
+                    document.getElementById('background').src = images[0];
+                }
+            } catch (error) {
+                console.error('Fehler beim Laden der Bilder:', error);
+                // Fallback zu Beispielbildern
+                images = [
+                    'https://picsum.photos/1080/1920?random=1',
+                    'https://picsum.photos/1080/1920?random=2',
+                    'https://picsum.photos/1080/1920?random=3'
+                ];
+            }
+        }
+
+        // News laden
+        async function loadNews() {
+            try {
+                const response = await fetch(`${API_BASE}/api/news`);
+                const data = await response.json();
+                newsItems = data;
+                if (newsItems.length > 0) {
+                    rotateNews();
+                }
+            } catch (error) {
+                console.error('Fehler beim Laden der News:', error);
+            }
+        }
+
+        // News rotieren (2 Zeilen gleichzeitig, alle 10 Sekunden wechseln)
+        function rotateNews() {
+            if (newsItems.length === 0) return;
+
+            const item1 = document.getElementById('newsItem1');
+            const item2 = document.getElementById('newsItem2');
+
+            // Fade out
+            item1.classList.remove('active');
+            item2.classList.remove('active');
+
+            setTimeout(() => {
+                // Zeige 2 aufeinanderfolgende News
+                const news1 = newsItems[currentNewsIndex % newsItems.length];
+                const news2 = newsItems[(currentNewsIndex + 1) % newsItems.length];
+
+                item1.innerHTML = `<strong>📰 SRF News:</strong> ${news1.title}`;
+                item2.innerHTML = `<strong>📰 SRF News:</strong> ${news2.title}`;
+
+                // Fade in
+                setTimeout(() => {
+                    item1.classList.add('active');
+                    item2.classList.add('active');
+                }, 50);
+
+                currentNewsIndex += 2;
+            }, 500);
+        }
+
+        // ÖV-Abfahrten laden
+        async function loadTransport() {
+            try {
+                const response = await fetch(`${API_BASE}/api/transport`);
+                const data = await response.json();
+                
+                if (!data.enabled || !data.stations || data.stations.length === 0) {
+                    document.getElementById('transportPanel').style.display = 'none';
+                    return;
+                }
+
+                document.getElementById('transportPanel').style.display = 'block';
+                const container = document.getElementById('transportContent');
+                
+                let html = '<div class="transport-stations">';
+                for (const station of data.stations) {
+                    html += `<div class="station-group">`;
+                    html += `<div class="station-name">${station.station.name}</div>`;
+                    html += `<div class="departures-list">`;
+                    
+                    for (const dep of station.departures) {
+                        const now = new Date();
+                        const depTime = new Date(dep.actualDeparture || dep.departure);
+                        const minutesUntil = Math.round((depTime - now) / 60000);
+                        
+                        // Kategorie für Styling
+                        let lineClass = 'departure-line';
+                        const cat = dep.category?.toLowerCase() || '';
+                        if (cat.includes('tram') || cat === 't') {
+                            lineClass += ' tram';
+                        } else if (cat.includes('bus') || cat === 'b' || cat === 'nfb') {
+                            lineClass += ' bus';
+                        } else if (cat.includes('s') || cat.includes('ir') || cat.includes('ic') || cat.includes('re')) {
+                            lineClass += ' train';
+                        }
+                        
+                        // Verspätung
+                        const timeClass = dep.delay > 0 ? 'departure-time delayed' : 'departure-time';
+                        const delayHtml = dep.delay > 0 ? `<span class="departure-delay">+${dep.delay}'</span>` : '';
+                        
+                        // Minuten bis Abfahrt
+                        let minutesText = '';
+                        if (minutesUntil <= 0) {
+                            minutesText = 'jetzt';
+                        } else if (minutesUntil === 1) {
+                            minutesText = "1'";
+                        } else {
+                            minutesText = `${minutesUntil}'`;
+                        }
+                        
+                        html += `
+                            <div class="departure">
+                                <span class="${timeClass}">${dep.actualTime || dep.departureTime}</span>
+                                <span class="${lineClass}">${dep.number || dep.line}</span>
+                                <span class="departure-destination">${dep.destination}${delayHtml}</span>
+                                <span class="departure-minutes">${minutesText}</span>
+                            </div>
+                        `;
+                    }
+                    
+                    html += `</div></div>`;
+                }
+                html += '</div>';
+                
+                container.innerHTML = html;
+            } catch (error) {
+                console.error('Fehler beim Laden der ÖV-Daten:', error);
+                document.getElementById('transportContent').innerHTML = 
+                    '<div style="opacity: 0.6; font-size: 0.85rem;">ÖV-Daten nicht verfügbar</div>';
+            }
+        }
+
+        // Initialisierung
+        updateTime();
+        setInterval(updateTime, 1000);
+
+        loadWeather();
+        setInterval(loadWeather, 10 * 60 * 1000); // Alle 10 Minuten
+
+        loadCalendar();
+        setInterval(loadCalendar, 5 * 60 * 1000); // Alle 5 Minuten
+
+        // ÖV-Abfahrten laden
+        loadTransport();
+        setInterval(loadTransport, 60 * 1000); // Jede Minute aktualisieren
+
+        // Bilder laden und Wechsel starten
+        loadImages().then(() => {
+            if (images.length > 0) {
+                setInterval(changeBackground, config.images.changeInterval);
+            }
+        });
+
+        // News laden und rotieren
+        loadNews();
+        setInterval(loadNews, 10 * 60 * 1000); // Alle 10 Minuten neu laden
+        setInterval(rotateNews, 10 * 1000); // Alle 10 Sekunden rotieren
+    </script>
+</body>
+</html>

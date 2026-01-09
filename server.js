@@ -1,0 +1,747 @@
+const express = require('express');
+const cors = require('cors');
+const bodyParser = require('body-parser');
+const path = require('path');
+const fs = require('fs');
+require('dotenv').config();
+
+const app = express();
+const PORT = process.env.PORT || 3000;
+const CONFIG_FILE = path.join(__dirname, 'config.json');
+
+// Middleware
+app.use(cors());
+app.use(bodyParser.json());
+app.use(express.static('public'));
+
+// Konfiguration aus Datei laden oder Standard verwenden
+let config = {
+  weather: {
+    apiKey: process.env.WEATHER_API_KEY || '',
+    city: process.env.WEATHER_CITY || 'Basel',
+    country: process.env.WEATHER_COUNTRY || 'CH',
+    lat: process.env.WEATHER_LAT || 47.5596,
+    lon: process.env.WEATHER_LON || 7.5886
+  },
+  calendars: {
+    google: [],
+    icloud: []
+  },
+  images: {
+    changeInterval: parseInt(process.env.IMAGE_CHANGE_INTERVAL) || 120000,
+    sources: []
+  },
+  transport: {
+    enabled: true,
+    // Koordinaten Rotbergerstrasse 16, Basel
+    lat: 47.5417,
+    lon: 7.6028,
+    stations: [], // Wird automatisch gefüllt oder manuell konfiguriert
+    limit: 5 // Anzahl Abfahrten pro Haltestelle
+  },
+  display: {
+    locale: process.env.LOCALE || 'de-CH',
+    timezone: process.env.TIMEZONE || 'Europe/Zurich'
+  }
+};
+
+// Konfiguration laden
+function loadConfig() {
+  try {
+    if (fs.existsSync(CONFIG_FILE)) {
+      const data = fs.readFileSync(CONFIG_FILE, 'utf8');
+      const savedConfig = JSON.parse(data);
+      config = { ...config, ...savedConfig };
+      console.log('Konfiguration geladen aus config.json');
+    }
+  } catch (error) {
+    console.error('Fehler beim Laden der Konfiguration:', error);
+  }
+}
+
+// Konfiguration speichern
+function saveConfig() {
+  try {
+    fs.writeFileSync(CONFIG_FILE, JSON.stringify(config, null, 2));
+    console.log('Konfiguration gespeichert in config.json');
+  } catch (error) {
+    console.error('Fehler beim Speichern der Konfiguration:', error);
+  }
+}
+
+// Beim Start laden
+loadConfig();
+
+// API Routes
+
+// Wetter-Daten abrufen
+app.get('/api/weather', async (req, res) => {
+  try {
+    const fetch = (await import('node-fetch')).default;
+    const { lat, lon, apiKey } = config.weather;
+    
+    if (!apiKey) {
+      return res.json({ error: 'API-Schlüssel nicht konfiguriert' });
+    }
+
+    // Aktuelles Wetter
+    const currentUrl = `https://api.openweathermap.org/data/2.5/weather?lat=${lat}&lon=${lon}&appid=${apiKey}&units=metric&lang=de`;
+    const currentResponse = await fetch(currentUrl);
+    const currentData = await currentResponse.json();
+
+    // 5-Tages-Prognose
+    const forecastUrl = `https://api.openweathermap.org/data/2.5/forecast?lat=${lat}&lon=${lon}&appid=${apiKey}&units=metric&lang=de`;
+    const forecastResponse = await fetch(forecastUrl);
+    const forecastData = await forecastResponse.json();
+
+    res.json({
+      current: {
+        temp: Math.round(currentData.main.temp),
+        feels_like: Math.round(currentData.main.feels_like),
+        humidity: currentData.main.humidity,
+        description: currentData.weather[0].description,
+        icon: currentData.weather[0].icon,
+        wind: currentData.wind.speed
+      },
+      forecast: forecastData.list
+        .filter((item, index) => index % 8 === 0) // Jeden Tag um 12:00
+        .slice(0, 5)
+        .map(item => ({
+          date: new Date(item.dt * 1000),
+          temp: Math.round(item.main.temp),
+          temp_min: Math.round(item.main.temp_min),
+          temp_max: Math.round(item.main.temp_max),
+          icon: item.weather[0].icon,
+          description: item.weather[0].description,
+          rain: item.rain ? item.rain['3h'] : 0
+        }))
+    });
+  } catch (error) {
+    console.error('Wetter-Fehler:', error);
+    res.status(500).json({ error: 'Fehler beim Abrufen der Wetterdaten' });
+  }
+});
+
+// Kalender-Daten abrufen
+app.get('/api/calendars', async (req, res) => {
+  try {
+    const fetch = (await import('node-fetch')).default;
+    const ical = require('node-ical');
+    const RRule = require('rrule').RRule;
+    const events = [];
+
+    // Zeitraum für die Abfrage: 1 Woche zurück bis 2 Monate voraus
+    const rangeStart = new Date();
+    rangeStart.setDate(rangeStart.getDate() - 7);
+    rangeStart.setHours(0, 0, 0, 0);
+    
+    const rangeEnd = new Date();
+    rangeEnd.setMonth(rangeEnd.getMonth() + 2);
+    rangeEnd.setHours(23, 59, 59, 999);
+
+    // Hilfsfunktion: webcal zu https konvertieren
+    const normalizeUrl = (url) => {
+      return url.replace(/^webcal:\/\//i, 'https://');
+    };
+
+    // Hilfsfunktion: Event für einen bestimmten Tag erstellen
+    const createEventInstance = (event, instanceStart, instanceEnd, calendar, color) => {
+      const isAllDay = event.start && event.start.dateOnly === true;
+      return {
+        id: `${event.uid}_${instanceStart.getTime()}`,
+        title: event.summary,
+        start: instanceStart,
+        end: instanceEnd,
+        allDay: isAllDay,
+        calendar: calendar.name,
+        color: color
+      };
+    };
+
+    // Hilfsfunktion: Mehrtägige Events in einzelne Tage aufteilen
+    const expandMultiDayEvent = (event, calendar, color) => {
+      const expandedEvents = [];
+      const start = new Date(event.start);
+      const end = new Date(event.end);
+      const isAllDay = event.start && event.start.dateOnly === true;
+      
+      // Bei ganztägigen Events: Ende ist exklusiv (00:00 des Folgetages)
+      // Korrigiere das Ende für die Berechnung
+      const effectiveEnd = new Date(end);
+      if (isAllDay) {
+        effectiveEnd.setDate(effectiveEnd.getDate() - 1);
+      }
+      
+      // Berechne Anzahl der Tage
+      const startDay = new Date(start.getFullYear(), start.getMonth(), start.getDate());
+      const endDay = new Date(effectiveEnd.getFullYear(), effectiveEnd.getMonth(), effectiveEnd.getDate());
+      const daysDiff = Math.floor((endDay - startDay) / (1000 * 60 * 60 * 24));
+      
+      if (daysDiff <= 0) {
+        // Eintägiges Event
+        expandedEvents.push(createEventInstance(event, start, end, calendar, color));
+      } else {
+        // Mehrtägiges Event: Für jeden Tag einen Eintrag erstellen
+        for (let i = 0; i <= daysDiff; i++) {
+          const dayStart = new Date(startDay);
+          dayStart.setDate(startDay.getDate() + i);
+          
+          let instanceStart, instanceEnd;
+          
+          if (isAllDay) {
+            instanceStart = new Date(dayStart);
+            instanceEnd = new Date(dayStart);
+            instanceEnd.setDate(instanceEnd.getDate() + 1);
+          } else {
+            if (i === 0) {
+              // Erster Tag: Original-Startzeit
+              instanceStart = new Date(start);
+            } else {
+              instanceStart = new Date(dayStart);
+              instanceStart.setHours(0, 0, 0, 0);
+            }
+            
+            if (i === daysDiff) {
+              // Letzter Tag: Original-Endzeit
+              instanceEnd = new Date(end);
+            } else {
+              instanceEnd = new Date(dayStart);
+              instanceEnd.setHours(23, 59, 59, 999);
+            }
+          }
+          
+          // Nur Events im gewünschten Zeitraum hinzufügen
+          if (instanceStart >= rangeStart && instanceStart <= rangeEnd) {
+            const instance = createEventInstance(event, instanceStart, instanceEnd, calendar, color);
+            instance.multiDay = true;
+            instance.dayIndex = i + 1;
+            instance.totalDays = daysDiff + 1;
+            expandedEvents.push(instance);
+          }
+        }
+      }
+      
+      return expandedEvents;
+    };
+
+    // Hilfsfunktion: Wiederkehrende Events expandieren
+    const expandRecurringEvent = (event, calendar, color) => {
+      const expandedEvents = [];
+      
+      if (!event.rrule) {
+        return expandMultiDayEvent(event, calendar, color);
+      }
+      
+      try {
+        // RRule aus dem Event extrahieren
+        let rrule;
+        if (typeof event.rrule === 'string') {
+          rrule = RRule.fromString(event.rrule);
+        } else if (event.rrule.options) {
+          // node-ical liefert manchmal ein RRule-Objekt
+          rrule = new RRule(event.rrule.options);
+        } else if (event.rrule.origOptions) {
+          rrule = new RRule(event.rrule.origOptions);
+        } else {
+          // Falls rrule ein fertiges RRule-Objekt ist
+          rrule = event.rrule;
+        }
+        
+        // Alle Instanzen im Zeitraum berechnen
+        const instances = rrule.between(rangeStart, rangeEnd, true);
+        
+        // Event-Dauer berechnen
+        const originalStart = new Date(event.start);
+        const originalEnd = new Date(event.end);
+        const duration = originalEnd - originalStart;
+        
+        for (const instanceDate of instances) {
+          const instanceStart = new Date(instanceDate);
+          const instanceEnd = new Date(instanceStart.getTime() + duration);
+          
+          // Prüfe ob diese Instanz durch eine Exception überschrieben wird
+          if (event.exdate) {
+            const exdates = Array.isArray(event.exdate) ? event.exdate : [event.exdate];
+            const isExcluded = exdates.some(exdate => {
+              const exDate = new Date(exdate);
+              return exDate.toDateString() === instanceStart.toDateString();
+            });
+            if (isExcluded) continue;
+          }
+          
+          // Für mehrtägige wiederkehrende Events
+          const tempEvent = { ...event, start: instanceStart, end: instanceEnd };
+          const dayExpanded = expandMultiDayEvent(tempEvent, calendar, color);
+          expandedEvents.push(...dayExpanded);
+        }
+      } catch (err) {
+        console.error(`Fehler beim Expandieren von RRULE für "${event.summary}":`, err.message);
+        // Fallback: Event als einzelnes Event behandeln
+        return expandMultiDayEvent(event, calendar, color);
+      }
+      
+      return expandedEvents;
+    };
+
+    // Kalender verarbeiten (für beide Typen)
+    const processCalendar = async (calendar, defaultColor) => {
+      if (!calendar.enabled || !calendar.url) return;
+      
+      try {
+        const normalizedUrl = normalizeUrl(calendar.url);
+        const data = await ical.async.fromURL(normalizedUrl);
+        
+        for (const k in data) {
+          const event = data[k];
+          if (event.type === 'VEVENT') {
+            const color = calendar.color || defaultColor;
+            const expandedEvents = expandRecurringEvent(event, calendar, color);
+            events.push(...expandedEvents);
+          }
+        }
+      } catch (err) {
+        console.error(`Fehler bei Kalender ${calendar.name}:`, err.message);
+      }
+    };
+
+    // Google Kalender abrufen
+    for (const calendar of config.calendars.google) {
+      await processCalendar(calendar, '#4285f4');
+    }
+
+    // iCloud Kalender abrufen
+    for (const calendar of config.calendars.icloud) {
+      await processCalendar(calendar, '#ff2d55');
+    }
+
+    // Events nach Startdatum sortieren
+    events.sort((a, b) => new Date(a.start) - new Date(b.start));
+
+    res.json(events);
+  } catch (error) {
+    console.error('Kalender-Fehler:', error);
+    res.status(500).json({ error: 'Fehler beim Abrufen der Kalender' });
+  }
+});
+
+// Konfiguration abrufen
+app.get('/api/config', (req, res) => {
+  res.json(config);
+});
+
+// Konfiguration aktualisieren
+app.post('/api/config', (req, res) => {
+  config = { ...config, ...req.body };
+  saveConfig();
+  res.json({ success: true, config });
+});
+
+// Kalender hinzufügen
+app.post('/api/calendars/add', (req, res) => {
+  const { type, name, url, color } = req.body;
+  const calendar = {
+    id: Date.now().toString(),
+    name,
+    url,
+    color,
+    enabled: true
+  };
+
+  if (type === 'google') {
+    config.calendars.google.push(calendar);
+  } else if (type === 'icloud') {
+    config.calendars.icloud.push(calendar);
+  }
+
+  saveConfig();
+  res.json({ success: true, calendar });
+});
+
+// Kalender löschen
+app.delete('/api/calendars/:type/:id', (req, res) => {
+  const { type, id } = req.params;
+  
+  if (type === 'google') {
+    config.calendars.google = config.calendars.google.filter(c => c.id !== id);
+  } else if (type === 'icloud') {
+    config.calendars.icloud = config.calendars.icloud.filter(c => c.id !== id);
+  }
+
+  saveConfig();
+  res.json({ success: true });
+});
+
+// Bildquellen
+let imagesCache = [];
+let lastImageCheck = 0;
+const IMAGE_CACHE_TIME = 5 * 60 * 1000; // 5 Minuten Cache
+
+app.get('/api/images', async (req, res) => {
+  try {
+    // Prüfe ob Cache noch gültig
+    const now = Date.now();
+    if (imagesCache.length > 0 && (now - lastImageCheck) < IMAGE_CACHE_TIME) {
+      return res.json(imagesCache);
+    }
+
+    const images = [];
+    
+    // iCloud Shared Album URLs
+    for (const source of config.images.sources) {
+      if (source.enabled) {
+        if (source.type === 'icloud_shared') {
+          // Extrahiere Token aus iCloud URL
+          const match = source.url.match(/#([A-Za-z0-9]+)/);
+          if (match) {
+            const token = match[1];
+            console.log('Lade iCloud Album, Token:', token);
+            
+            try {
+              const fetch = (await import('node-fetch')).default;
+              
+              // Lade die öffentliche Webseite
+              const webUrl = `https://www.icloud.com/sharedalbum/#${token}`;
+              console.log('Lade Webseite:', webUrl);
+              
+              const response = await fetch(webUrl, {
+                headers: {
+                  'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36'
+                }
+              });
+              
+              if (response.ok) {
+                const html = await response.text();
+                
+                // Suche nach Foto-URLs im HTML
+                // iCloud bettet die Foto-Daten im Script-Tag ein
+                const scriptMatch = html.match(/window\.photos\s*=\s*(\[[\s\S]*?\]);/);
+                if (scriptMatch) {
+                  try {
+                    const photosData = JSON.parse(scriptMatch[1]);
+                    photosData.forEach(photo => {
+                      if (photo.derivatives && photo.derivatives.length > 0) {
+                        // Höchste Auflösung wählen
+                        const derivative = photo.derivatives[photo.derivatives.length - 1];
+                        images.push({
+                          url: derivative.url,
+                          source: source.name || 'iCloud Album'
+                        });
+                      }
+                    });
+                    console.log(`${images.length} Fotos aus iCloud Album extrahiert`);
+                  } catch (parseErr) {
+                    console.error('Fehler beim Parsen der Foto-Daten:', parseErr.message);
+                  }
+                }
+                
+                // Alternative: Suche direkt nach Bild-URLs
+                if (images.length === 0) {
+                  const urlMatches = html.match(/https:\/\/cvws\.icloud-content\.com\/[^"'\s]+/g);
+                  if (urlMatches) {
+                    // Entferne Duplikate
+                    const uniqueUrls = [...new Set(urlMatches)];
+                    uniqueUrls.forEach(url => {
+                      images.push({
+                        url: url,
+                        source: source.name || 'iCloud Album'
+                      });
+                    });
+                    console.log(`${images.length} Foto-URLs aus HTML extrahiert`);
+                  }
+                }
+              }
+            } catch (err) {
+              console.error('Fehler beim Laden des iCloud Albums:', err.message);
+            }
+          }
+        } else if (source.type === 'url') {
+          images.push({
+            url: source.url,
+            source: source.name || 'Bild'
+          });
+        } else if (source.type === 'local_folder') {
+          // Lokaler Ordner auf dem Pi
+          if (source.path) {
+            try {
+              const fs = require('fs');
+              const path = require('path');
+              const fullPath = path.resolve(source.path);
+              
+              if (fs.existsSync(fullPath)) {
+                const files = fs.readdirSync(fullPath);
+                files.forEach(file => {
+                  const ext = path.extname(file).toLowerCase();
+                  if (['.jpg', '.jpeg', '.png', '.gif', '.webp'].includes(ext)) {
+                    images.push({
+                      url: `/local-images/${path.basename(file)}`,
+                      source: source.name || 'Lokal'
+                    });
+                  }
+                });
+              }
+            } catch (err) {
+              console.error('Fehler beim Laden lokaler Bilder:', err.message);
+            }
+          }
+        }
+      }
+    }
+    
+    // Falls keine Bilder, verwende Beispielbilder
+    if (images.length === 0) {
+      console.log('Keine Bilder gefunden, verwende Beispielbilder');
+      images.push(
+        { url: 'https://picsum.photos/1080/1920?random=1', source: 'Beispiel' },
+        { url: 'https://picsum.photos/1080/1920?random=2', source: 'Beispiel' },
+        { url: 'https://picsum.photos/1080/1920?random=3', source: 'Beispiel' }
+      );
+    }
+    
+    // Cache aktualisieren
+    imagesCache = images;
+    lastImageCheck = now;
+    
+    console.log(`Sende ${images.length} Bilder zurück`);
+    res.json(images);
+  } catch (error) {
+    console.error('Fehler beim Laden der Bilder:', error);
+    res.status(500).json({ error: 'Fehler beim Abrufen der Bilder' });
+  }
+});
+
+app.post('/api/images/add', (req, res) => {
+  const { url, type, name, path } = req.body;
+  const source = {
+    id: Date.now().toString(),
+    url,
+    path,
+    type,
+    name: name || 'Bildquelle',
+    enabled: true
+  };
+  config.images.sources.push(source);
+  saveConfig();
+  res.json({ success: true, source });
+});
+
+app.delete('/api/images/:id', (req, res) => {
+  const { id } = req.params;
+  config.images.sources = config.images.sources.filter(s => s.id !== id);
+  saveConfig();
+  res.json({ success: true });
+});
+
+// Serve lokale Bilder
+app.get('/local-images/:filename', (req, res) => {
+  const filename = req.params.filename;
+  // Finde den konfigurierten Pfad
+  const localSource = config.images.sources.find(s => s.type === 'local_folder');
+  if (localSource && localSource.path) {
+    const filePath = path.join(localSource.path, filename);
+    res.sendFile(filePath);
+  } else {
+    res.status(404).send('Bildquelle nicht konfiguriert');
+  }
+});
+
+// News von RSS Feed
+app.get('/api/news', async (req, res) => {
+  try {
+    const fetch = (await import('node-fetch')).default;
+    const response = await fetch('https://www.srf.ch/news/bnf/rss/19032223');
+    const xml = await response.text();
+    
+    // Parse RSS Feed (einfaches XML-Parsing)
+    const items = [];
+    const itemRegex = /<item>([\s\S]*?)<\/item>/g;
+    const titleRegex = /<title><!\[CDATA\[(.*?)\]\]><\/title>/;
+    const linkRegex = /<link>(.*?)<\/link>/;
+    
+    let match;
+    while ((match = itemRegex.exec(xml)) !== null) {
+      const itemXml = match[1];
+      const titleMatch = titleRegex.exec(itemXml);
+      const linkMatch = linkRegex.exec(itemXml);
+      
+      if (titleMatch) {
+        items.push({
+          title: titleMatch[1],
+          link: linkMatch ? linkMatch[1] : ''
+        });
+      }
+    }
+    
+    // Limitiere auf 20 neueste News
+    res.json(items.slice(0, 20));
+  } catch (error) {
+    console.error('Fehler beim Laden der News:', error);
+    res.status(500).json({ error: 'Fehler beim Abrufen der News' });
+  }
+});
+
+// ÖV-Abfahrten (Swiss Public Transport API)
+app.get('/api/transport', async (req, res) => {
+  try {
+    const fetch = (await import('node-fetch')).default;
+    const TRANSPORT_API = 'https://transport.opendata.ch/v1';
+    
+    if (!config.transport || !config.transport.enabled) {
+      return res.json({ enabled: false, stations: [] });
+    }
+
+    let stations = config.transport.stations || [];
+    
+    // Falls keine Haltestellen konfiguriert, suche die nächsten basierend auf Koordinaten
+    if (stations.length === 0 && config.transport.lat && config.transport.lon) {
+      try {
+        const locationUrl = `${TRANSPORT_API}/locations?x=${config.transport.lat}&y=${config.transport.lon}&type=station`;
+        const locationResponse = await fetch(locationUrl);
+        const locationData = await locationResponse.json();
+        
+        if (locationData.stations && locationData.stations.length > 0) {
+          // Nehme die nächsten 3 Haltestellen
+          stations = locationData.stations.slice(0, 3).map(s => ({
+            id: s.id,
+            name: s.name,
+            distance: s.distance
+          }));
+          
+          // Speichere die gefundenen Haltestellen in der Konfiguration
+          config.transport.stations = stations;
+          saveConfig();
+          console.log('Gefundene Haltestellen:', stations.map(s => s.name).join(', '));
+        }
+      } catch (err) {
+        console.error('Fehler beim Suchen der Haltestellen:', err.message);
+      }
+    }
+
+    // Falls immer noch keine Haltestellen, verwende Standard für Rotbergerstrasse Basel
+    if (stations.length === 0) {
+      stations = [
+        { id: '8500096', name: 'Basel, Kannenfeldplatz' },
+        { id: '8500097', name: 'Basel, Schützenhaus' }
+      ];
+    }
+
+    const limit = config.transport.limit || 5;
+    const result = [];
+
+    // Für jede Haltestelle die Abfahrten abrufen
+    for (const station of stations) {
+      try {
+        const stationParam = station.id ? `id=${station.id}` : `station=${encodeURIComponent(station.name)}`;
+        const boardUrl = `${TRANSPORT_API}/stationboard?${stationParam}&limit=${limit}`;
+        const boardResponse = await fetch(boardUrl);
+        const boardData = await boardResponse.json();
+
+        if (boardData.stationboard && boardData.stationboard.length > 0) {
+          const departures = boardData.stationboard.map(journey => {
+            const departure = new Date(journey.stop.departure);
+            const prognosis = journey.stop.prognosis;
+            let delay = null;
+            let actualDeparture = departure;
+            
+            if (prognosis && prognosis.departure) {
+              actualDeparture = new Date(prognosis.departure);
+              delay = Math.round((actualDeparture - departure) / 60000); // Verspätung in Minuten
+            }
+
+            return {
+              line: journey.category + ' ' + journey.number,
+              category: journey.category,
+              number: journey.number,
+              destination: journey.to,
+              departure: departure.toISOString(),
+              departureTime: departure.toLocaleTimeString('de-CH', { hour: '2-digit', minute: '2-digit' }),
+              actualDeparture: actualDeparture.toISOString(),
+              actualTime: actualDeparture.toLocaleTimeString('de-CH', { hour: '2-digit', minute: '2-digit' }),
+              delay: delay,
+              platform: journey.stop.platform || '',
+              operator: journey.operator
+            };
+          });
+
+          result.push({
+            station: {
+              id: boardData.station?.id || station.id,
+              name: boardData.station?.name || station.name,
+              distance: station.distance
+            },
+            departures: departures
+          });
+        }
+      } catch (err) {
+        console.error(`Fehler beim Abrufen der Abfahrten für ${station.name}:`, err.message);
+      }
+    }
+
+    res.json({
+      enabled: true,
+      stations: result,
+      lastUpdate: new Date().toISOString()
+    });
+
+  } catch (error) {
+    console.error('Transport-Fehler:', error);
+    res.status(500).json({ error: 'Fehler beim Abrufen der ÖV-Daten' });
+  }
+});
+
+// Transport-Konfiguration aktualisieren
+app.post('/api/transport/config', (req, res) => {
+  const { enabled, lat, lon, stations, limit } = req.body;
+  
+  if (!config.transport) {
+    config.transport = {};
+  }
+  
+  if (typeof enabled !== 'undefined') config.transport.enabled = enabled;
+  if (lat) config.transport.lat = lat;
+  if (lon) config.transport.lon = lon;
+  if (stations) config.transport.stations = stations;
+  if (limit) config.transport.limit = limit;
+  
+  saveConfig();
+  res.json({ success: true, transport: config.transport });
+});
+
+// Haltestellen suchen
+app.get('/api/transport/search', async (req, res) => {
+  try {
+    const fetch = (await import('node-fetch')).default;
+    const { query, lat, lon } = req.query;
+    
+    let url;
+    if (query) {
+      url = `https://transport.opendata.ch/v1/locations?query=${encodeURIComponent(query)}&type=station`;
+    } else if (lat && lon) {
+      url = `https://transport.opendata.ch/v1/locations?x=${lat}&y=${lon}&type=station`;
+    } else {
+      return res.status(400).json({ error: 'Query oder Koordinaten erforderlich' });
+    }
+    
+    const response = await fetch(url);
+    const data = await response.json();
+    
+    res.json(data.stations || []);
+  } catch (error) {
+    console.error('Fehler bei Haltestellensuche:', error);
+    res.status(500).json({ error: 'Fehler bei der Suche' });
+  }
+});
+
+// Dashboard anzeigen
+app.get('/', (req, res) => {
+  res.sendFile(path.join(__dirname, 'public', 'index.html'));
+});
+
+// Settings-Seite
+app.get('/settings', (req, res) => {
+  res.sendFile(path.join(__dirname, 'public', 'settings.html'));
+});
+
+app.listen(PORT, () => {
+  console.log(`Family Dashboard läuft auf http://localhost:${PORT}`);
+  console.log(`Einstellungen: http://localhost:${PORT}/settings`);
+});
