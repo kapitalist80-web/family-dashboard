@@ -39,6 +39,13 @@ let config = {
     stations: [], // Wird automatisch gefüllt oder manuell konfiguriert
     limit: 5 // Anzahl Abfahrten pro Haltestelle
   },
+  // NEU: Abfuhr-Konfiguration für Basel-Stadt
+  abfuhr: {
+    enabled: true,
+    zone: 'A', // Abfuhrzone A-H (kann in Settings geändert werden)
+    reminderDaysBefore: 1, // Erinnerung X Tage vor Abfuhr
+    showTypes: ['Kehricht', 'Papier', 'Karton', 'Grüngut', 'Metall', 'Sperrgut'] // Welche Abfuhrtypen angezeigt werden
+  },
   display: {
     locale: process.env.LOCALE || 'de-CH',
     timezone: process.env.TIMEZONE || 'Europe/Zurich'
@@ -52,6 +59,15 @@ function loadConfig() {
       const data = fs.readFileSync(CONFIG_FILE, 'utf8');
       const savedConfig = JSON.parse(data);
       config = { ...config, ...savedConfig };
+      // Stelle sicher, dass abfuhr-Konfiguration existiert (für Updates von älteren Versionen)
+      if (!config.abfuhr) {
+        config.abfuhr = {
+          enabled: true,
+          zone: 'A',
+          reminderDaysBefore: 1,
+          showTypes: ['Kehricht', 'Papier', 'Karton', 'Grüngut', 'Metall', 'Sperrgut']
+        };
+      }
       console.log('Konfiguration geladen aus config.json');
     }
   } catch (error) {
@@ -323,6 +339,185 @@ app.get('/api/calendars', async (req, res) => {
     res.status(500).json({ error: 'Fehler beim Abrufen der Kalender' });
   }
 });
+
+// ============================================
+// NEU: Abfuhrtermine Basel-Stadt API
+// ============================================
+
+// Cache für Abfuhrtermine (wird einmal täglich aktualisiert)
+let abfuhrCache = {
+  data: [],
+  lastUpdate: 0,
+  cacheTime: 24 * 60 * 60 * 1000 // 24 Stunden Cache
+};
+
+// Abfuhrtermine von Basel Open Data API abrufen
+app.get('/api/abfuhr', async (req, res) => {
+  try {
+    if (!config.abfuhr || !config.abfuhr.enabled) {
+      return res.json({ enabled: false, reminders: [], upcoming: [] });
+    }
+
+    const fetch = (await import('node-fetch')).default;
+    const zone = config.abfuhr.zone || 'A';
+    const reminderDays = config.abfuhr.reminderDaysBefore || 1;
+    const showTypes = config.abfuhr.showTypes || ['Kehricht', 'Papier', 'Karton', 'Grüngut', 'Metall', 'Sperrgut'];
+    
+    const now = new Date();
+    const today = new Date(now.getFullYear(), now.getMonth(), now.getDate());
+    
+    // Prüfe Cache
+    let abfuhrData = [];
+    if (abfuhrCache.data.length > 0 && (Date.now() - abfuhrCache.lastUpdate) < abfuhrCache.cacheTime) {
+      abfuhrData = abfuhrCache.data;
+      console.log('Verwende gecachte Abfuhrdaten');
+    } else {
+      // Lade Daten von Basel Open Data API
+      // API: https://data.bs.ch/api/explore/v2.1/catalog/datasets/100096/records
+      // Filter nach Zone und aktuellem Jahr
+      const currentYear = now.getFullYear();
+      const apiUrl = `https://data.bs.ch/api/explore/v2.1/catalog/datasets/100096/records?where=zone%3D%27${zone}%27&limit=100&order_by=termin`;
+      
+      try {
+        console.log('Lade Abfuhrdaten von API:', apiUrl);
+        const response = await fetch(apiUrl, {
+          timeout: 10000,
+          headers: {
+            'Accept': 'application/json'
+          }
+        });
+        
+        if (response.ok) {
+          const data = await response.json();
+          
+          if (data.results && data.results.length > 0) {
+            abfuhrData = data.results.map(record => ({
+              date: record.termin,
+              type: record.art,
+              zone: record.zone,
+              area: record.gebiet || ''
+            }));
+            
+            // Cache aktualisieren
+            abfuhrCache.data = abfuhrData;
+            abfuhrCache.lastUpdate = Date.now();
+            console.log(`${abfuhrData.length} Abfuhrtermine geladen für Zone ${zone}`);
+          }
+        } else {
+          console.error('API-Fehler:', response.status, response.statusText);
+        }
+      } catch (apiError) {
+        console.error('Fehler beim Abrufen der Abfuhr-API:', apiError.message);
+        // Fallback: Verwende gecachte Daten falls vorhanden
+        if (abfuhrCache.data.length > 0) {
+          abfuhrData = abfuhrCache.data;
+          console.log('Verwende alte gecachte Daten nach API-Fehler');
+        }
+      }
+    }
+
+    // Filtere nach angezeigten Typen und zukünftigen Terminen
+    const filteredData = abfuhrData.filter(item => {
+      const itemDate = new Date(item.date);
+      const itemDateOnly = new Date(itemDate.getFullYear(), itemDate.getMonth(), itemDate.getDate());
+      return itemDateOnly >= today && showTypes.some(type => 
+        item.type.toLowerCase().includes(type.toLowerCase())
+      );
+    });
+
+    // Sortiere nach Datum
+    filteredData.sort((a, b) => new Date(a.date) - new Date(b.date));
+
+    // Finde Erinnerungen (Abfuhren in X Tagen)
+    const reminderDate = new Date(today);
+    reminderDate.setDate(reminderDate.getDate() + reminderDays);
+    
+    const reminders = filteredData.filter(item => {
+      const itemDate = new Date(item.date);
+      const itemDateOnly = new Date(itemDate.getFullYear(), itemDate.getMonth(), itemDate.getDate());
+      return itemDateOnly.getTime() === reminderDate.getTime();
+    });
+
+    // Nächste 10 Abfuhren
+    const upcoming = filteredData.slice(0, 10).map(item => ({
+      ...item,
+      dateFormatted: new Date(item.date).toLocaleDateString('de-CH', {
+        weekday: 'short',
+        day: 'numeric',
+        month: 'short'
+      }),
+      daysUntil: Math.ceil((new Date(item.date) - today) / (1000 * 60 * 60 * 24))
+    }));
+
+    res.json({
+      enabled: true,
+      zone: zone,
+      reminders: reminders.map(item => ({
+        ...item,
+        dateFormatted: new Date(item.date).toLocaleDateString('de-CH', {
+          weekday: 'long',
+          day: 'numeric',
+          month: 'long'
+        })
+      })),
+      upcoming: upcoming,
+      lastUpdate: abfuhrCache.lastUpdate ? new Date(abfuhrCache.lastUpdate).toISOString() : null
+    });
+
+  } catch (error) {
+    console.error('Abfuhr-Fehler:', error);
+    res.status(500).json({ error: 'Fehler beim Abrufen der Abfuhrtermine' });
+  }
+});
+
+// Abfuhr-Konfiguration aktualisieren
+app.post('/api/abfuhr/config', (req, res) => {
+  const { enabled, zone, reminderDaysBefore, showTypes } = req.body;
+  
+  if (!config.abfuhr) {
+    config.abfuhr = {};
+  }
+  
+  if (typeof enabled !== 'undefined') config.abfuhr.enabled = enabled;
+  if (zone) {
+    config.abfuhr.zone = zone.toUpperCase();
+    // Cache invalidieren bei Zonenwechsel
+    abfuhrCache.lastUpdate = 0;
+  }
+  if (typeof reminderDaysBefore !== 'undefined') config.abfuhr.reminderDaysBefore = parseInt(reminderDaysBefore);
+  if (showTypes) config.abfuhr.showTypes = showTypes;
+  
+  saveConfig();
+  res.json({ success: true, abfuhr: config.abfuhr });
+});
+
+// Verfügbare Abfuhrzonen abrufen
+app.get('/api/abfuhr/zones', (req, res) => {
+  // Basel-Stadt Abfuhrzonen
+  const zones = [
+    { id: 'A', name: 'Zone A', description: 'Altstadt Grossbasel, Vorstädte, Am Ring' },
+    { id: 'B', name: 'Zone B', description: 'Clara, Wettstein, Hirzbrunnen' },
+    { id: 'C', name: 'Zone C', description: 'Breite, St. Alban, Gundeldingen' },
+    { id: 'D', name: 'Zone D', description: 'Bruderholz, Bachletten' },
+    { id: 'E', name: 'Zone E', description: 'Gotthelf, Iselin, St. Johann' },
+    { id: 'F', name: 'Zone F', description: 'Matthäus, Klybeck, Kleinhüningen' },
+    { id: 'G', name: 'Zone G', description: 'Rosental, Erlenmatt' },
+    { id: 'G-UF', name: 'Zone G-UF', description: 'Rosental Unterflur' },
+    { id: 'H', name: 'Zone H', description: 'Riehen, Bettingen' }
+  ];
+  res.json(zones);
+});
+
+// Cache manuell leeren
+app.post('/api/abfuhr/refresh', (req, res) => {
+  abfuhrCache.lastUpdate = 0;
+  abfuhrCache.data = [];
+  res.json({ success: true, message: 'Cache geleert' });
+});
+
+// ============================================
+// Ende Abfuhr-API
+// ============================================
 
 // Konfiguration abrufen
 app.get('/api/config', (req, res) => {

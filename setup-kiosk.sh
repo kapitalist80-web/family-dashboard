@@ -10,10 +10,8 @@ if ! command -v chromium-browser &> /dev/null && ! command -v chromium &> /dev/n
 then
     echo "Chromium nicht gefunden. Installiere..."
     sudo apt update
-    # Versuche erst chromium, dann chromium-browser (für ältere Versionen)
     if sudo apt install -y chromium 2>/dev/null; then
         echo "✓ Chromium installiert"
-        # Symlink für Kompatibilität
         sudo ln -sf /usr/bin/chromium /usr/bin/chromium-browser 2>/dev/null
     elif sudo apt install -y chromium-browser 2>/dev/null; then
         echo "✓ Chromium-browser installiert"

@@ -54,7 +54,7 @@
             display: flex;
             justify-content: space-between;
             align-items: flex-start;
-            margin-bottom: 30px;
+            margin-bottom: 20px;
         }
 
         .time-date {
@@ -145,6 +145,156 @@
             margin-top: 3px;
         }
 
+        /* Abfuhr-Erinnerung Banner */
+        .abfuhr-reminder {
+            position: fixed;
+            top: 0;
+            left: 0;
+            right: 0;
+            background: linear-gradient(135deg, #f59e0b 0%, #d97706 100%);
+            padding: 12px 20px;
+            z-index: 100;
+            display: none;
+            animation: slideDown 0.5s ease-out;
+        }
+
+        @keyframes slideDown {
+            from {
+                transform: translateY(-100%);
+                opacity: 0;
+            }
+            to {
+                transform: translateY(0);
+                opacity: 1;
+            }
+        }
+
+        .abfuhr-reminder.visible {
+            display: block;
+        }
+
+        .abfuhr-reminder-content {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 15px;
+        }
+
+        .abfuhr-reminder-icon {
+            font-size: 2rem;
+        }
+
+        .abfuhr-reminder-text {
+            font-size: 1.2rem;
+            font-weight: 600;
+        }
+
+        .abfuhr-reminder-items {
+            display: flex;
+            gap: 10px;
+            flex-wrap: wrap;
+            justify-content: center;
+            margin-top: 5px;
+        }
+
+        .abfuhr-reminder-item {
+            background: rgba(255,255,255,0.2);
+            padding: 4px 12px;
+            border-radius: 20px;
+            font-size: 0.95rem;
+            display: flex;
+            align-items: center;
+            gap: 6px;
+        }
+
+        /* Abfuhr-Panel (nächste Abfuhren) */
+        .abfuhr-panel {
+            position: fixed;
+            top: 20px;
+            right: 20px;
+            background: rgba(0,0,0,0.5);
+            backdrop-filter: blur(10px);
+            border-radius: 12px;
+            padding: 15px;
+            min-width: 200px;
+            max-width: 280px;
+            z-index: 50;
+            display: none;
+        }
+
+        .abfuhr-panel.visible {
+            display: block;
+        }
+
+        .abfuhr-panel-header {
+            font-size: 0.9rem;
+            font-weight: 600;
+            margin-bottom: 10px;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            color: #fbbf24;
+        }
+
+        .abfuhr-panel-header::before {
+            content: "🗑️";
+        }
+
+        .abfuhr-list {
+            display: flex;
+            flex-direction: column;
+            gap: 8px;
+        }
+
+        .abfuhr-item {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            padding: 6px 0;
+            border-bottom: 1px solid rgba(255,255,255,0.1);
+        }
+
+        .abfuhr-item:last-child {
+            border-bottom: none;
+        }
+
+        .abfuhr-item-icon {
+            font-size: 1.2rem;
+            min-width: 28px;
+            text-align: center;
+        }
+
+        .abfuhr-item-info {
+            flex: 1;
+        }
+
+        .abfuhr-item-type {
+            font-size: 0.85rem;
+            font-weight: 500;
+        }
+
+        .abfuhr-item-date {
+            font-size: 0.75rem;
+            opacity: 0.7;
+        }
+
+        .abfuhr-item-days {
+            font-size: 0.75rem;
+            padding: 2px 8px;
+            border-radius: 10px;
+            background: rgba(255,255,255,0.15);
+        }
+
+        .abfuhr-item-days.today {
+            background: #ef4444;
+            font-weight: 600;
+        }
+
+        .abfuhr-item-days.tomorrow {
+            background: #f59e0b;
+            font-weight: 600;
+        }
+
         /* News Ticker */
         .news-ticker {
             position: fixed;
@@ -187,7 +337,7 @@
         /* ÖV-Abfahrten */
         .transport-panel {
             position: fixed;
-            bottom: 70px; /* Über dem News-Ticker */
+            bottom: 70px;
             left: 20px;
             right: 20px;
             background: rgba(0,0,0,0.4);
@@ -302,11 +452,12 @@
         /* Kalender */
         .calendar {
             flex: 0 1 auto;
-            max-height: 70vh;
+            max-height: 65vh;
             background: rgba(0,0,0,0.2);
             border-radius: 12px;
             padding: 20px;
             overflow: hidden;
+            margin-top: 10px;
         }
 
         .month-header {
@@ -382,13 +533,29 @@
             opacity: 0.9;
             display: inline;
         }
+
+        /* Container anpassen wenn Erinnerung sichtbar */
+        .container.with-reminder {
+            padding-top: 80px;
+        }
     </style>
 </head>
 <body>
     <img id="background" src="" alt="">
     <div class="overlay"></div>
     
-    <div class="container">
+    <!-- Abfuhr-Erinnerung Banner (erscheint am Tag vor der Abfuhr) -->
+    <div class="abfuhr-reminder" id="abfuhrReminder">
+        <div class="abfuhr-reminder-content">
+            <span class="abfuhr-reminder-icon">🗑️</span>
+            <div>
+                <div class="abfuhr-reminder-text">Morgen ist Abfuhrtag!</div>
+                <div class="abfuhr-reminder-items" id="abfuhrReminderItems"></div>
+            </div>
+        </div>
+    </div>
+
+    <div class="container" id="mainContainer">
         <div class="header">
             <div class="time-date">
                 <div class="time" id="time">10:20</div>
@@ -407,6 +574,12 @@
                 </div>
                 <div class="forecast" id="forecast"></div>
             </div>
+        </div>
+
+        <!-- Nächste Abfuhren Panel -->
+        <div class="abfuhr-panel" id="abfuhrPanel">
+            <div class="abfuhr-panel-header">Nächste Abfuhren</div>
+            <div class="abfuhr-list" id="abfuhrList"></div>
         </div>
 
         <div class="calendar">
@@ -442,6 +615,28 @@
         };
         let newsItems = [];
         let currentNewsIndex = 0;
+
+        // Abfuhr-Typ Icons
+        const abfuhrIcons = {
+            'kehricht': '🗑️',
+            'papier': '📰',
+            'karton': '📦',
+            'grüngut': '🌿',
+            'grungut': '🌿',
+            'metall': '🔧',
+            'sperrgut': '🛋️',
+            'default': '♻️'
+        };
+
+        function getAbfuhrIcon(type) {
+            const typeLower = type.toLowerCase();
+            for (const [key, icon] of Object.entries(abfuhrIcons)) {
+                if (typeLower.includes(key)) {
+                    return icon;
+                }
+            }
+            return abfuhrIcons.default;
+        }
 
         // Zeit und Datum aktualisieren
         function updateTime() {
@@ -499,6 +694,79 @@
             }
         }
 
+        // Abfuhrtermine laden
+        async function loadAbfuhr() {
+            try {
+                const response = await fetch(`${API_BASE}/api/abfuhr`);
+                const data = await response.json();
+                
+                if (!data.enabled) {
+                    document.getElementById('abfuhrReminder').classList.remove('visible');
+                    document.getElementById('abfuhrPanel').classList.remove('visible');
+                    document.getElementById('mainContainer').classList.remove('with-reminder');
+                    return;
+                }
+
+                // Erinnerungen anzeigen (Abfuhren morgen)
+                const reminderEl = document.getElementById('abfuhrReminder');
+                const reminderItemsEl = document.getElementById('abfuhrReminderItems');
+                const containerEl = document.getElementById('mainContainer');
+                
+                if (data.reminders && data.reminders.length > 0) {
+                    reminderItemsEl.innerHTML = data.reminders.map(item => `
+                        <span class="abfuhr-reminder-item">
+                            ${getAbfuhrIcon(item.type)} ${item.type}
+                        </span>
+                    `).join('');
+                    reminderEl.classList.add('visible');
+                    containerEl.classList.add('with-reminder');
+                } else {
+                    reminderEl.classList.remove('visible');
+                    containerEl.classList.remove('with-reminder');
+                }
+
+                // Nächste Abfuhren Panel
+                const panelEl = document.getElementById('abfuhrPanel');
+                const listEl = document.getElementById('abfuhrList');
+                
+                if (data.upcoming && data.upcoming.length > 0) {
+                    listEl.innerHTML = data.upcoming.slice(0, 6).map(item => {
+                        let daysClass = '';
+                        let daysText = `${item.daysUntil} Tage`;
+                        
+                        if (item.daysUntil === 0) {
+                            daysClass = 'today';
+                            daysText = 'Heute';
+                        } else if (item.daysUntil === 1) {
+                            daysClass = 'tomorrow';
+                            daysText = 'Morgen';
+                        } else if (item.daysUntil === 2) {
+                            daysText = 'Übermorgen';
+                        }
+                        
+                        return `
+                            <div class="abfuhr-item">
+                                <span class="abfuhr-item-icon">${getAbfuhrIcon(item.type)}</span>
+                                <div class="abfuhr-item-info">
+                                    <div class="abfuhr-item-type">${item.type}</div>
+                                    <div class="abfuhr-item-date">${item.dateFormatted}</div>
+                                </div>
+                                <span class="abfuhr-item-days ${daysClass}">${daysText}</span>
+                            </div>
+                        `;
+                    }).join('');
+                    panelEl.classList.add('visible');
+                } else {
+                    panelEl.classList.remove('visible');
+                }
+
+            } catch (error) {
+                console.error('Fehler beim Laden der Abfuhrtermine:', error);
+                document.getElementById('abfuhrReminder').classList.remove('visible');
+                document.getElementById('abfuhrPanel').classList.remove('visible');
+            }
+        }
+
         // Kalender laden
         async function loadCalendar() {
             try {
@@ -516,12 +784,12 @@
             
             // Berechne Start der aktuellen Woche (Montag)
             const currentDay = now.getDay();
-            const diff = currentDay === 0 ? -6 : 1 - currentDay; // Wenn Sonntag, dann -6, sonst 1-currentDay
+            const diff = currentDay === 0 ? -6 : 1 - currentDay;
             const weekStart = new Date(now);
             weekStart.setDate(now.getDate() + diff);
             weekStart.setHours(0, 0, 0, 0);
             
-            // Ende der zweiten Woche (13 Tage später = 2 Wochen)
+            // Ende der zweiten Woche
             const weekEnd = new Date(weekStart);
             weekEnd.setDate(weekStart.getDate() + 13);
             
@@ -630,7 +898,6 @@
                 }
             } catch (error) {
                 console.error('Fehler beim Laden der Bilder:', error);
-                // Fallback zu Beispielbildern
                 images = [
                     'https://picsum.photos/1080/1920?random=1',
                     'https://picsum.photos/1080/1920?random=2',
@@ -653,26 +920,23 @@
             }
         }
 
-        // News rotieren (2 Zeilen gleichzeitig, alle 10 Sekunden wechseln)
+        // News rotieren
         function rotateNews() {
             if (newsItems.length === 0) return;
 
             const item1 = document.getElementById('newsItem1');
             const item2 = document.getElementById('newsItem2');
 
-            // Fade out
             item1.classList.remove('active');
             item2.classList.remove('active');
 
             setTimeout(() => {
-                // Zeige 2 aufeinanderfolgende News
                 const news1 = newsItems[currentNewsIndex % newsItems.length];
                 const news2 = newsItems[(currentNewsIndex + 1) % newsItems.length];
 
                 item1.innerHTML = `<strong>📰 SRF News:</strong> ${news1.title}`;
                 item2.innerHTML = `<strong>📰 SRF News:</strong> ${news2.title}`;
 
-                // Fade in
                 setTimeout(() => {
                     item1.classList.add('active');
                     item2.classList.add('active');
@@ -707,7 +971,6 @@
                         const depTime = new Date(dep.actualDeparture || dep.departure);
                         const minutesUntil = Math.round((depTime - now) / 60000);
                         
-                        // Kategorie für Styling
                         let lineClass = 'departure-line';
                         const cat = dep.category?.toLowerCase() || '';
                         if (cat.includes('tram') || cat === 't') {
@@ -718,11 +981,9 @@
                             lineClass += ' train';
                         }
                         
-                        // Verspätung
                         const timeClass = dep.delay > 0 ? 'departure-time delayed' : 'departure-time';
                         const delayHtml = dep.delay > 0 ? `<span class="departure-delay">+${dep.delay}'</span>` : '';
                         
-                        // Minuten bis Abfahrt
                         let minutesText = '';
                         if (minutesUntil <= 0) {
                             minutesText = 'jetzt';
@@ -759,26 +1020,27 @@
         setInterval(updateTime, 1000);
 
         loadWeather();
-        setInterval(loadWeather, 10 * 60 * 1000); // Alle 10 Minuten
+        setInterval(loadWeather, 10 * 60 * 1000);
 
         loadCalendar();
-        setInterval(loadCalendar, 5 * 60 * 1000); // Alle 5 Minuten
+        setInterval(loadCalendar, 5 * 60 * 1000);
 
-        // ÖV-Abfahrten laden
+        // Abfuhrtermine laden
+        loadAbfuhr();
+        setInterval(loadAbfuhr, 60 * 60 * 1000); // Jede Stunde aktualisieren
+
         loadTransport();
-        setInterval(loadTransport, 60 * 1000); // Jede Minute aktualisieren
+        setInterval(loadTransport, 60 * 1000);
 
-        // Bilder laden und Wechsel starten
         loadImages().then(() => {
             if (images.length > 0) {
                 setInterval(changeBackground, config.images.changeInterval);
             }
         });
 
-        // News laden und rotieren
         loadNews();
-        setInterval(loadNews, 10 * 60 * 1000); // Alle 10 Minuten neu laden
-        setInterval(rotateNews, 10 * 1000); // Alle 10 Sekunden rotieren
+        setInterval(loadNews, 10 * 60 * 1000);
+        setInterval(rotateNews, 10 * 1000);
     </script>
 </body>
 </html>

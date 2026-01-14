@@ -1,13 +1,20 @@
-# Familienkalender Dashboard für Raspberry Pi
+# 🏠 Family Dashboard für Raspberry Pi
+
+[![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
+[![Node.js](https://img.shields.io/badge/Node.js-18+-green.svg)](https://nodejs.org/)
 
 Ein DakBoard-ähnliches Dashboard für deinen Raspberry Pi mit Hochkant-Monitor.
+
+![Dashboard Preview](https://via.placeholder.com/800x400/1a1a2e/ffffff?text=Family+Dashboard)
+
+> **Speziell für Basel-Stadt**: Integrierte Abfuhr-Erinnerungen mit der offiziellen Open Data API!
 
 ## Features
 
 ✅ **Kalender-Integration**
 - Google Kalender (mehrere gleichzeitig)
 - iCloud Kalender
-- Monatsansicht mit Terminen
+- 2-Wochen-Ansicht mit Terminen
 - Farbcodierung
 
 ✅ **Wetter-Anzeige**
@@ -15,17 +22,53 @@ Ein DakBoard-ähnliches Dashboard für deinen Raspberry Pi mit Hochkant-Monitor.
 - 5-Tages-Prognose
 - Temperatur, Luftfeuchtigkeit, Wind
 
+✅ **🆕 Abfuhr-Erinnerungen (Basel-Stadt)**
+- Automatische Integration mit der Open Data API Basel-Stadt
+- Erinnerungen am Tag vor der Abfuhr
+- Übersicht der nächsten Termine
+- Unterstützt alle Abfuhrtypen: Kehricht, Papier, Karton, Grüngut, Metall, Sperrgut
+- Konfigurierbar nach Abfuhrzone (A-H)
+
+✅ **ÖV-Abfahrten**
+- Nächste Abfahrten von umliegenden Haltestellen
+- Echtzeit-Verspätungsinformationen
+- Swiss Public Transport API
+
+✅ **News-Ticker**
+- SRF News RSS-Feed
+- Automatische Rotation
+
 ✅ **Hintergrundbilder**
 - Automatischer Wechsel alle 2 Minuten
 - Smooth Crossfade-Effekte
 
 ✅ **Web-Backend**
 - Einstellungsseite zur Konfiguration
-- Kalender hinzufügen/entfernen
-- Wetter-Einstellungen
-- Anzeige-Optionen
+- Alle Einstellungen über Browser
 
-## Installation auf Raspberry Pi
+## 🚀 Schnellstart
+
+```bash
+# Repository klonen
+git clone https://github.com/DEIN-USERNAME/family-dashboard.git
+cd family-dashboard
+
+# Abhängigkeiten installieren
+npm install
+
+# Konfiguration erstellen
+cp .env.example .env
+nano .env  # API-Key eintragen
+
+# Server starten
+npm start
+```
+
+Öffne dann http://localhost:3000 im Browser.
+
+---
+
+## 📦 Installation auf Raspberry Pi
 
 ### 1. Voraussetzungen
 
@@ -33,34 +76,31 @@ Ein DakBoard-ähnliches Dashboard für deinen Raspberry Pi mit Hochkant-Monitor.
 # System aktualisieren
 sudo apt update && sudo apt upgrade -y
 
-# Node.js installieren (falls noch nicht vorhanden)
+# Node.js 18+ installieren
 curl -fsSL https://deb.nodesource.com/setup_18.x | sudo -E bash -
-sudo apt install -y nodejs
-
-# Git installieren
-sudo apt install -y git
+sudo apt install -y nodejs git
 ```
 
 ### 2. Projekt einrichten
 
 ```bash
-# Projekt-Verzeichnis erstellen
-cd /home/pi
-mkdir family-dashboard
+# Repository klonen
+cd ~
+git clone https://github.com/DEIN-USERNAME/family-dashboard.git
 cd family-dashboard
-
-# Dateien kopieren (lade das Projekt herunter und kopiere alle Dateien)
-# Oder klone das Repository wenn verfügbar
 
 # Abhängigkeiten installieren
 npm install
+
+# Konfiguration erstellen
+cp .env.example .env
+nano .env
 ```
 
 ### 3. Konfiguration
 
 ```bash
 # .env Datei erstellen
-cp .env.example .env
 nano .env
 ```
 
@@ -87,110 +127,116 @@ npm start
 sudo npm install -g pm2
 pm2 start server.js --name family-dashboard
 pm2 save
-pm2 startup
+pm2 startup  # Folge den Anweisungen
 ```
 
-### 5. Autostart beim Booten
+### 5. Kiosk-Modus einrichten (optional)
 
 ```bash
-# Chromium im Kiosk-Modus automatisch starten
-nano ~/.config/lxsession/LXDE-pi/autostart
+# Automatisches Setup-Script ausführen
+chmod +x setup-kiosk.sh
+./setup-kiosk.sh
 ```
 
-Füge hinzu:
+Oder manuell: Füge in `~/.config/lxsession/LXDE-pi/autostart` hinzu:
 
 ```
-@chromium-browser --kiosk --app=http://localhost:3000 --start-fullscreen --display=:0
 @xset s off
 @xset -dpms
-@xset s noblank
+@chromium-browser --kiosk --app=http://localhost:3000
 ```
 
-### 6. Monitor hochkant einstellen
+### 6. Monitor drehen (Hochformat)
 
 ```bash
-# Für DSI/HDMI-Monitor
-sudo nano /boot/config.txt
+sudo nano /boot/firmware/config.txt
+# Füge hinzu: display_hdmi_rotate=1
+sudo reboot
 ```
 
-Füge hinzu:
+---
 
-```
-# Display drehen (90° nach rechts)
-display_rotate=1
+## Abfuhr-Einstellungen (Basel-Stadt)
 
-# Oder für neuere Raspberry Pi:
-display_hdmi_rotate=1
-```
+Das Dashboard integriert die offizielle Open Data API des Kantons Basel-Stadt für Abfuhrtermine.
 
-Neustart: `sudo reboot`
+### Konfiguration
 
-## Kalender einrichten
+1. Öffne die Einstellungen: `http://localhost:3000/settings`
+2. Im Abschnitt "Abfuhr-Einstellungen":
+   - Wähle deine **Abfuhrzone** (A-H)
+   - Stelle ein, wie viele **Tage vorher** die Erinnerung erscheinen soll
+   - Wähle die **Abfuhrtypen**, die angezeigt werden sollen
 
-### Google Kalender
+### Abfuhrzonen Basel-Stadt
 
-1. Öffne [Google Calendar](https://calendar.google.com)
-2. Klicke auf die drei Punkte neben dem Kalender → "Einstellungen und Freigabe"
-3. Scrolle zu "Kalenderadresse"
-4. Kopiere die "Geheime Adresse im iCal-Format"
-5. Füge sie im Dashboard unter http://localhost:3000/settings ein
+| Zone | Quartiere |
+|------|-----------|
+| A | Altstadt Grossbasel, Vorstädte, Am Ring |
+| B | Clara, Wettstein, Hirzbrunnen |
+| C | Breite, St. Alban, Gundeldingen |
+| D | Bruderholz, Bachletten |
+| E | Gotthelf, Iselin, St. Johann |
+| F | Matthäus, Klybeck, Kleinhüningen |
+| G | Rosental, Erlenmatt |
+| H | Riehen, Bettingen |
 
-### iCloud Kalender
+### Zone nachschlagen
 
-1. Gehe zu [iCloud.com/calendar](https://www.icloud.com/calendar)
-2. Klicke auf das Teilen-Symbol neben dem Kalender
-3. Aktiviere "Öffentlicher Kalender"
-4. Kopiere die Webcal-URL
-5. Ändere `webcal://` zu `https://`
-6. Füge die URL im Dashboard ein
+Deine genaue Zone findest du unter: https://www.geo.bs.ch/abfuhrzonen
+
+### Anzeige im Dashboard
+
+- **Erinnerungs-Banner**: Erscheint am Tag vor der Abfuhr oben im Dashboard
+- **Abfuhr-Panel**: Zeigt die nächsten Termine rechts oben
+
+### API-Datenquelle
+
+Die Daten stammen von der offiziellen Open Data Plattform:
+https://data.bs.ch/explore/dataset/100096/
 
 ## Verwendung
 
 - **Dashboard**: http://localhost:3000
 - **Einstellungen**: http://localhost:3000/settings
 
+## API-Endpunkte
+
+### Abfuhr
+
+| Endpunkt | Beschreibung |
+|----------|--------------|
+| `GET /api/abfuhr` | Nächste Abfuhrtermine und Erinnerungen |
+| `POST /api/abfuhr/config` | Abfuhr-Einstellungen aktualisieren |
+| `GET /api/abfuhr/zones` | Verfügbare Abfuhrzonen |
+| `POST /api/abfuhr/refresh` | Cache aktualisieren |
+
+### Weitere
+
+| Endpunkt | Beschreibung |
+|----------|--------------|
+| `GET /api/weather` | Wetterdaten |
+| `GET /api/calendars` | Kalendertermine |
+| `GET /api/transport` | ÖV-Abfahrten |
+| `GET /api/news` | News-Feed |
+| `GET /api/config` | Konfiguration abrufen |
+| `POST /api/config` | Konfiguration speichern |
+
 ## Fehlerbehebung
 
-### Wetter wird nicht angezeigt
-- Prüfe ob der OpenWeatherMap API-Schlüssel korrekt ist
-- Es kann bis zu 2 Stunden dauern bis ein neuer API-Schlüssel aktiv ist
+### Abfuhr-Daten werden nicht angezeigt
 
-### Kalender zeigt keine Termine
-- Prüfe ob die iCal-URLs korrekt sind
-- Google: URL muss mit `https://calendar.google.com/calendar/ical/` beginnen
-- iCloud: URL muss mit `https://` (nicht `webcal://`) beginnen
+1. Prüfe die Netzwerkverbindung zum Internet
+2. Stelle sicher, dass die API `data.bs.ch` erreichbar ist
+3. Klicke auf "Cache aktualisieren" in den Einstellungen
+4. Prüfe die Server-Logs: `pm2 logs family-dashboard`
 
-### Bildschirm schaltet sich aus
-```bash
-# Screensaver deaktivieren
-sudo nano /etc/lightdm/lightdm.conf
+### Falsche Zone
 
-# Unter [Seat:*] hinzufügen:
-xserver-command=X -s 0 -dpms
-```
-
-### Server startet nicht automatisch
-```bash
-# PM2 Logs prüfen
-pm2 logs family-dashboard
-
-# PM2 Status
-pm2 status
-```
-
-## Verbesserungen & Erweiterungen
-
-Mögliche zukünftige Features:
-
-- [ ] iCloud Shared Album Integration
-- [ ] Lokale Bildordner
-- [ ] Google Fotos Integration
-- [ ] News-Feed
-- [ ] ÖPNV-Verbindungen
-- [ ] Geburtstagserinnerungen
-- [ ] Einkaufsliste
-- [ ] Persistente Konfiguration (JSON/SQLite)
-- [ ] Multi-User-Support
+1. Gehe zu https://www.geo.bs.ch/abfuhrzonen
+2. Gib deine Adresse ein
+3. Notiere die angezeigte Zone
+4. Ändere die Zone in den Dashboard-Einstellungen
 
 ## Technologie-Stack
 
@@ -198,11 +244,46 @@ Mögliche zukünftige Features:
 - **Frontend**: Vanilla JavaScript
 - **Kalender**: node-ical (iCal/CalDAV Parser)
 - **Wetter**: OpenWeatherMap API
+- **Abfuhr**: Open Data Basel-Stadt API
+- **ÖV**: Swiss Public Transport API
 
 ## Lizenz
 
 MIT
 
-## Credits
+## 📝 Changelog
 
-Inspiriert von DakBoard - erstellt für persönliche Nutzung auf Raspberry Pi.
+### v1.1.0
+- 🆕 Integration der Basel-Stadt Abfuhr-API
+- 🆕 Erinnerungs-Banner für Abfuhrtage
+- 🆕 Panel mit nächsten Abfuhrterminen
+- 🆕 Konfigurierbare Abfuhrtypen und Zonen
+- 🆕 Cache für API-Anfragen
+
+### v1.0.0
+- Initial Release
+- Kalender-Integration (Google, iCloud)
+- Wetter-Anzeige
+- ÖV-Abfahrten
+- News-Ticker
+
+---
+
+## 🙏 Credits & Datenquellen
+
+- **Abfuhrdaten**: [Open Data Basel-Stadt](https://data.bs.ch/explore/dataset/100096/)
+- **Wetter**: [OpenWeatherMap](https://openweathermap.org/)
+- **ÖV-Daten**: [Swiss Public Transport API](https://transport.opendata.ch/)
+- **News**: [SRF News RSS](https://www.srf.ch/)
+
+---
+
+## 🤝 Contributing
+
+Beiträge sind willkommen! Bitte erstelle einen Pull Request oder öffne ein Issue.
+
+---
+
+## ⭐ Star History
+
+Wenn dir dieses Projekt gefällt, gib ihm einen Stern! ⭐

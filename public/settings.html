@@ -5,377 +5,196 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Dashboard Einstellungen</title>
     <style>
-        * {
-            margin: 0;
-            padding: 0;
-            box-sizing: border-box;
-        }
-
-        body {
-            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
-            background: #f5f5f5;
-            padding: 20px;
-        }
-
-        .container {
-            max-width: 1200px;
-            margin: 0 auto;
-        }
-
-        h1 {
-            color: #333;
-            margin-bottom: 30px;
-        }
-
-        .section {
-            background: white;
-            border-radius: 8px;
-            padding: 25px;
-            margin-bottom: 20px;
-            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
-        }
-
-        h2 {
-            color: #444;
-            margin-bottom: 20px;
-            border-bottom: 2px solid #4285f4;
-            padding-bottom: 10px;
-        }
-
-        .form-group {
-            margin-bottom: 20px;
-        }
-
-        label {
-            display: block;
-            margin-bottom: 8px;
-            color: #555;
-            font-weight: 500;
-        }
-
-        input[type="text"],
-        input[type="number"],
-        input[type="password"],
-        select {
-            width: 100%;
-            padding: 10px;
-            border: 1px solid #ddd;
-            border-radius: 4px;
-            font-size: 14px;
-        }
-
-        input[type="color"] {
-            width: 60px;
-            height: 40px;
-            border: 1px solid #ddd;
-            border-radius: 4px;
-            cursor: pointer;
-        }
-
-        button {
-            background: #4285f4;
-            color: white;
-            border: none;
-            padding: 10px 20px;
-            border-radius: 4px;
-            cursor: pointer;
-            font-size: 14px;
-            font-weight: 500;
-        }
-
-        button:hover {
-            background: #3367d6;
-        }
-
-        button.danger {
-            background: #dc2626;
-        }
-
-        button.danger:hover {
-            background: #b91c1c;
-        }
-
-        .calendar-list,
-        .image-list {
-            margin-top: 15px;
-        }
-
-        .calendar-item,
-        .image-item {
-            background: #f9f9f9;
-            padding: 15px;
-            border-radius: 4px;
-            margin-bottom: 10px;
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-        }
-
-        .calendar-info {
-            flex: 1;
-        }
-
-        .calendar-name {
-            font-weight: 600;
-            margin-bottom: 5px;
-        }
-
-        .calendar-url {
-            font-size: 12px;
-            color: #666;
-            word-break: break-all;
-        }
-
-        .color-indicator {
-            width: 20px;
-            height: 20px;
-            border-radius: 50%;
-            margin-right: 10px;
-        }
-
-        .actions {
-            display: flex;
-            gap: 10px;
-        }
-
-        .success-message {
-            background: #10b981;
-            color: white;
-            padding: 10px 15px;
-            border-radius: 4px;
-            margin-bottom: 20px;
-            display: none;
-        }
-
-        .error-message {
-            background: #dc2626;
-            color: white;
-            padding: 10px 15px;
-            border-radius: 4px;
-            margin-bottom: 20px;
-            display: none;
-        }
-
-        .info-box {
-            background: #e3f2fd;
-            border-left: 4px solid #2196f3;
-            padding: 15px;
-            margin-bottom: 20px;
-            border-radius: 4px;
-        }
-
-        .info-box h3 {
-            color: #1976d2;
-            margin-bottom: 10px;
-        }
-
-        .info-box p {
-            color: #555;
-            line-height: 1.6;
-        }
-
-        .info-box code {
-            background: rgba(0,0,0,0.05);
-            padding: 2px 6px;
-            border-radius: 3px;
-            font-family: monospace;
-        }
-
-        .grid {
-            display: grid;
-            grid-template-columns: 1fr 1fr;
-            gap: 15px;
-        }
-
-        .back-link {
-            display: inline-block;
-            margin-bottom: 20px;
-            color: #4285f4;
-            text-decoration: none;
-        }
-
-        .back-link:hover {
-            text-decoration: underline;
-        }
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; background: #f5f5f5; padding: 20px; }
+        .container { max-width: 1200px; margin: 0 auto; }
+        h1 { color: #333; margin-bottom: 30px; }
+        .section { background: white; border-radius: 8px; padding: 25px; margin-bottom: 20px; box-shadow: 0 2px 4px rgba(0,0,0,0.1); }
+        h2 { color: #444; margin-bottom: 20px; border-bottom: 2px solid #4285f4; padding-bottom: 10px; }
+        .form-group { margin-bottom: 20px; }
+        label { display: block; margin-bottom: 8px; color: #555; font-weight: 500; }
+        input[type="text"], input[type="number"], input[type="password"], select { width: 100%; padding: 10px; border: 1px solid #ddd; border-radius: 4px; font-size: 14px; }
+        input[type="color"] { width: 60px; height: 40px; border: 1px solid #ddd; border-radius: 4px; cursor: pointer; }
+        input[type="checkbox"] { width: 18px; height: 18px; margin-right: 8px; vertical-align: middle; }
+        button { background: #4285f4; color: white; border: none; padding: 10px 20px; border-radius: 4px; cursor: pointer; font-size: 14px; font-weight: 500; }
+        button:hover { background: #3367d6; }
+        button.danger { background: #dc2626; }
+        button.danger:hover { background: #b91c1c; }
+        button.secondary { background: #6b7280; }
+        button.secondary:hover { background: #4b5563; }
+        .calendar-list, .image-list { margin-top: 15px; }
+        .calendar-item, .image-item { background: #f9f9f9; padding: 15px; border-radius: 4px; margin-bottom: 10px; display: flex; justify-content: space-between; align-items: center; }
+        .calendar-info { flex: 1; }
+        .calendar-name { font-weight: 600; margin-bottom: 5px; }
+        .calendar-url { font-size: 12px; color: #666; word-break: break-all; }
+        .color-indicator { width: 20px; height: 20px; border-radius: 50%; margin-right: 10px; }
+        .actions { display: flex; gap: 10px; }
+        .success-message { background: #10b981; color: white; padding: 10px 15px; border-radius: 4px; margin-bottom: 20px; display: none; }
+        .error-message { background: #dc2626; color: white; padding: 10px 15px; border-radius: 4px; margin-bottom: 20px; display: none; }
+        .info-box { background: #e3f2fd; border-left: 4px solid #2196f3; padding: 15px; margin-bottom: 20px; border-radius: 4px; }
+        .info-box.warning { background: #fff3cd; border-left-color: #f59e0b; }
+        .info-box.success { background: #d1fae5; border-left-color: #10b981; }
+        .info-box h3 { color: #1976d2; margin-bottom: 10px; }
+        .info-box.warning h3 { color: #b45309; }
+        .info-box.success h3 { color: #047857; }
+        .info-box p { color: #555; line-height: 1.6; }
+        .info-box code { background: rgba(0,0,0,0.05); padding: 2px 6px; border-radius: 3px; font-family: monospace; }
+        .grid { display: grid; grid-template-columns: 1fr 1fr; gap: 15px; }
+        .back-link { display: inline-block; margin-bottom: 20px; color: #4285f4; text-decoration: none; }
+        .back-link:hover { text-decoration: underline; }
+        .checkbox-group { display: flex; flex-wrap: wrap; gap: 10px; margin-top: 10px; }
+        .checkbox-item { display: flex; align-items: center; background: #f9f9f9; padding: 8px 12px; border-radius: 4px; }
+        .checkbox-item label { margin-bottom: 0; cursor: pointer; display: flex; align-items: center; }
+        .zone-description { font-size: 12px; color: #666; margin-top: 5px; }
+        .preview-box { background: #1f2937; color: white; padding: 15px; border-radius: 8px; margin-top: 15px; }
+        .preview-box h4 { margin-bottom: 10px; color: #fbbf24; }
+        .preview-item { display: flex; align-items: center; gap: 10px; padding: 8px 0; border-bottom: 1px solid rgba(255,255,255,0.1); font-size: 14px; }
+        .preview-item:last-child { border-bottom: none; }
+        .preview-icon { font-size: 1.2rem; }
     </style>
 </head>
 <body>
     <div class="container">
         <a href="/" class="back-link">← Zurück zum Dashboard</a>
-        
         <h1>Dashboard Einstellungen</h1>
-
         <div class="success-message" id="successMessage"></div>
         <div class="error-message" id="errorMessage"></div>
+
+        <!-- Abfuhr-Einstellungen -->
+        <div class="section">
+            <h2>🗑️ Abfuhr-Einstellungen (Basel-Stadt)</h2>
+            <div class="info-box success">
+                <h3>Stadtreinigung Basel-Stadt Integration</h3>
+                <p>
+                    Das Dashboard zeigt automatisch die nächsten Abfuhrtermine für deine Zone an.
+                    Die Daten stammen von der offiziellen <a href="https://data.bs.ch/explore/dataset/100096/" target="_blank">Open Data API des Kantons Basel-Stadt</a>.
+                </p>
+            </div>
+            <div class="form-group">
+                <label><input type="checkbox" id="abfuhrEnabled" checked> Abfuhr-Erinnerungen aktivieren</label>
+            </div>
+            <div class="grid">
+                <div class="form-group">
+                    <label>Abfuhrzone</label>
+                    <select id="abfuhrZone">
+                        <option value="A">Zone A - Altstadt Grossbasel, Vorstädte</option>
+                        <option value="B">Zone B - Clara, Wettstein, Hirzbrunnen</option>
+                        <option value="C">Zone C - Breite, St. Alban, Gundeldingen</option>
+                        <option value="D">Zone D - Bruderholz, Bachletten</option>
+                        <option value="E">Zone E - Gotthelf, Iselin, St. Johann</option>
+                        <option value="F">Zone F - Matthäus, Klybeck, Kleinhüningen</option>
+                        <option value="G">Zone G - Rosental, Erlenmatt</option>
+                        <option value="H">Zone H - Riehen, Bettingen</option>
+                    </select>
+                    <div class="zone-description">Wähle die Zone für deine Adresse. <a href="https://www.geo.bs.ch/abfuhrzonen" target="_blank">Zone nachschlagen</a></div>
+                </div>
+                <div class="form-group">
+                    <label>Erinnerung X Tage vorher</label>
+                    <select id="abfuhrReminderDays">
+                        <option value="0">Am Abfuhrtag</option>
+                        <option value="1" selected>1 Tag vorher (empfohlen)</option>
+                        <option value="2">2 Tage vorher</option>
+                    </select>
+                </div>
+            </div>
+            <div class="form-group">
+                <label>Angezeigte Abfuhrtypen</label>
+                <div class="checkbox-group" id="abfuhrTypesGroup">
+                    <div class="checkbox-item"><label><input type="checkbox" value="Kehricht" checked> 🗑️ Kehricht</label></div>
+                    <div class="checkbox-item"><label><input type="checkbox" value="Papier" checked> 📰 Papier</label></div>
+                    <div class="checkbox-item"><label><input type="checkbox" value="Karton" checked> 📦 Karton</label></div>
+                    <div class="checkbox-item"><label><input type="checkbox" value="Grüngut" checked> 🌿 Grüngut</label></div>
+                    <div class="checkbox-item"><label><input type="checkbox" value="Metall" checked> 🔧 Metall</label></div>
+                    <div class="checkbox-item"><label><input type="checkbox" value="Sperrgut" checked> 🛋️ Sperrgut</label></div>
+                </div>
+            </div>
+            <button onclick="saveAbfuhrSettings()">Abfuhr-Einstellungen speichern</button>
+            <button class="secondary" onclick="refreshAbfuhrCache()" style="margin-left: 10px;">Cache aktualisieren</button>
+            <div class="preview-box" id="abfuhrPreview">
+                <h4>🗓️ Nächste Abfuhren</h4>
+                <div id="abfuhrPreviewContent">Lade Vorschau...</div>
+            </div>
+        </div>
 
         <!-- Wetter-Einstellungen -->
         <div class="section">
             <h2>🌤️ Wetter-Einstellungen</h2>
-            
             <div class="info-box">
                 <h3>OpenWeatherMap API-Schlüssel</h3>
-                <p>
-                    Du benötigst einen kostenlosen API-Schlüssel von <a href="https://openweathermap.org/api" target="_blank">OpenWeatherMap</a>.
-                    Nach der Registrierung findest du den Schlüssel unter "API keys".
-                </p>
+                <p>Du benötigst einen kostenlosen API-Schlüssel von <a href="https://openweathermap.org/api" target="_blank">OpenWeatherMap</a>.</p>
             </div>
-
             <div class="form-group">
                 <label>API-Schlüssel</label>
                 <input type="text" id="weatherApiKey" placeholder="Dein OpenWeatherMap API-Schlüssel">
             </div>
-
             <div class="grid">
-                <div class="form-group">
-                    <label>Stadt</label>
-                    <input type="text" id="weatherCity" value="Basel">
-                </div>
-                <div class="form-group">
-                    <label>Land (ISO-Code)</label>
-                    <input type="text" id="weatherCountry" value="CH">
-                </div>
+                <div class="form-group"><label>Stadt</label><input type="text" id="weatherCity" value="Basel"></div>
+                <div class="form-group"><label>Land (ISO-Code)</label><input type="text" id="weatherCountry" value="CH"></div>
             </div>
-
             <div class="grid">
-                <div class="form-group">
-                    <label>Breitengrad</label>
-                    <input type="number" step="0.0001" id="weatherLat" value="47.5596">
-                </div>
-                <div class="form-group">
-                    <label>Längengrad</label>
-                    <input type="number" step="0.0001" id="weatherLon" value="7.5886">
-                </div>
+                <div class="form-group"><label>Breitengrad</label><input type="number" step="0.0001" id="weatherLat" value="47.5596"></div>
+                <div class="form-group"><label>Längengrad</label><input type="number" step="0.0001" id="weatherLon" value="7.5886"></div>
             </div>
-
             <button onclick="saveWeatherSettings()">Wetter-Einstellungen speichern</button>
         </div>
 
         <!-- Google Kalender -->
         <div class="section">
             <h2>📅 Google Kalender</h2>
-            
             <div class="info-box">
                 <h3>Google Kalender einrichten</h3>
-                <p>
-                    1. Öffne <a href="https://calendar.google.com" target="_blank">Google Calendar</a><br>
-                    2. Klicke auf die drei Punkte neben dem Kalender → "Einstellungen und Freigabe"<br>
-                    3. Scrolle zu "Kalenderadresse" und kopiere die "Geheime Adresse im iCal-Format"<br>
-                    4. Füge die URL hier ein
-                </p>
+                <p>1. Öffne <a href="https://calendar.google.com" target="_blank">Google Calendar</a><br>
+                2. Klicke auf die drei Punkte neben dem Kalender → "Einstellungen und Freigabe"<br>
+                3. Scrolle zu "Kalenderadresse" und kopiere die "Geheime Adresse im iCal-Format"</p>
             </div>
-
-            <div class="form-group">
-                <label>Kalendername</label>
-                <input type="text" id="googleCalendarName" placeholder="z.B. Familie, Arbeit, Geburtstage">
-            </div>
-
-            <div class="form-group">
-                <label>iCal URL (Geheime Adresse)</label>
-                <input type="text" id="googleCalendarUrl" placeholder="https://calendar.google.com/calendar/ical/...">
-            </div>
-
-            <div class="form-group">
-                <label>Farbe</label>
-                <input type="color" id="googleCalendarColor" value="#4285f4">
-            </div>
-
+            <div class="form-group"><label>Kalendername</label><input type="text" id="googleCalendarName" placeholder="z.B. Familie, Arbeit"></div>
+            <div class="form-group"><label>iCal URL</label><input type="text" id="googleCalendarUrl" placeholder="https://calendar.google.com/calendar/ical/..."></div>
+            <div class="form-group"><label>Farbe</label><input type="color" id="googleCalendarColor" value="#4285f4"></div>
             <button onclick="addGoogleCalendar()">Google Kalender hinzufügen</button>
-
             <div class="calendar-list" id="googleCalendarList"></div>
         </div>
 
         <!-- iCloud Kalender -->
         <div class="section">
             <h2>🍎 iCloud Kalender</h2>
-            
             <div class="info-box">
                 <h3>iCloud Kalender einrichten</h3>
-                <p>
-                    1. Gehe zu <a href="https://www.icloud.com/calendar" target="_blank">iCloud.com/calendar</a><br>
-                    2. Klicke auf das Teilen-Symbol neben dem Kalender<br>
-                    3. Aktiviere "Öffentlicher Kalender"<br>
-                    4. Kopiere die Webcal-URL und ändere <code>webcal://</code> zu <code>https://</code><br>
-                    5. Füge die URL hier ein
-                </p>
+                <p>1. Gehe zu <a href="https://www.icloud.com/calendar" target="_blank">iCloud.com/calendar</a><br>
+                2. Aktiviere "Öffentlicher Kalender" und kopiere die URL<br>
+                3. Ändere <code>webcal://</code> zu <code>https://</code></p>
             </div>
-
-            <div class="form-group">
-                <label>Kalendername</label>
-                <input type="text" id="icloudCalendarName" placeholder="z.B. Familie">
-            </div>
-
-            <div class="form-group">
-                <label>Kalender URL</label>
-                <input type="text" id="icloudCalendarUrl" placeholder="https://p01-caldav.icloud.com/published/2/...">
-            </div>
-
-            <div class="form-group">
-                <label>Farbe</label>
-                <input type="color" id="icloudCalendarColor" value="#ff2d55">
-            </div>
-
+            <div class="form-group"><label>Kalendername</label><input type="text" id="icloudCalendarName" placeholder="z.B. Familie"></div>
+            <div class="form-group"><label>Kalender URL</label><input type="text" id="icloudCalendarUrl" placeholder="https://p01-caldav.icloud.com/..."></div>
+            <div class="form-group"><label>Farbe</label><input type="color" id="icloudCalendarColor" value="#ff2d55"></div>
             <button onclick="addIcloudCalendar()">iCloud Kalender hinzufügen</button>
-
             <div class="calendar-list" id="icloudCalendarList"></div>
         </div>
 
         <!-- Hintergrundbilder -->
         <div class="section">
             <h2>🖼️ Hintergrundbilder</h2>
-            
-            <div class="info-box">
-                <h3>⚠️ Wichtig: iCloud Shared Album Einschränkung</h3>
-                <p>
-                    Apple erlaubt leider keinen direkten API-Zugriff auf Shared Albums.<br><br>
-                    <strong>Empfohlene Alternative: Lokaler Ordner</strong><br>
-                    1. Erstelle einen Ordner auf dem Pi: <code>mkdir ~/bilder</code><br>
-                    2. Lade Fotos von iCloud herunter und kopiere sie dort hin<br>
-                    3. Füge den Pfad hier hinzu: <code>/home/michelbossong/bilder</code><br>
-                    <br>
-                    <strong>Oder:</strong> Nutze einen anderen Cloud-Dienst mit öffentlichen URLs (Google Photos, Dropbox, etc.)
-                </p>
-            </div>
-
             <div class="form-group">
                 <label>Bildquelle</label>
                 <select id="imageSourceType">
                     <option value="local_folder">Lokaler Ordner (empfohlen)</option>
                     <option value="url">Einzelne Bild-URL</option>
-                    <option value="icloud_shared">iCloud Shared Album (experimentell)</option>
                 </select>
             </div>
-
-            <div class="form-group">
-                <label>Name</label>
-                <input type="text" id="imageSourceName" placeholder="z.B. Familienfotos">
-            </div>
-
-            <div class="form-group" id="urlField">
-                <label>URL</label>
-                <input type="text" id="imageSourceUrl" placeholder="https://...">
-            </div>
-
-            <div class="form-group" id="pathField" style="display:none;">
-                <label>Pfad zum Ordner</label>
-                <input type="text" id="imageSourcePath" placeholder="/home/michelbossong/bilder">
-            </div>
-
+            <div class="form-group"><label>Name</label><input type="text" id="imageSourceName" placeholder="z.B. Familienfotos"></div>
+            <div class="form-group" id="urlField"><label>URL</label><input type="text" id="imageSourceUrl" placeholder="https://..."></div>
+            <div class="form-group" id="pathField" style="display:none;"><label>Pfad zum Ordner</label><input type="text" id="imageSourcePath" placeholder="/home/pi/bilder"></div>
             <button onclick="addImageSource()">Bildquelle hinzufügen</button>
-
             <div class="form-group" style="margin-top: 30px;">
                 <label>Wechselintervall (Sekunden)</label>
                 <input type="number" id="imageInterval" value="120" min="30">
             </div>
-
             <button onclick="saveImageSettings()">Bild-Einstellungen speichern</button>
-
             <div class="image-list" id="imageSourceList" style="margin-top: 20px;"></div>
         </div>
 
         <!-- Anzeige-Einstellungen -->
         <div class="section">
             <h2>⚙️ Anzeige-Einstellungen</h2>
-
             <div class="grid">
                 <div class="form-group">
                     <label>Sprache/Region</label>
@@ -386,7 +205,6 @@
                         <option value="fr-CH">Français (Suisse)</option>
                     </select>
                 </div>
-
                 <div class="form-group">
                     <label>Zeitzone</label>
                     <select id="displayTimezone">
@@ -396,7 +214,6 @@
                     </select>
                 </div>
             </div>
-
             <button onclick="saveDisplaySettings()">Anzeige-Einstellungen speichern</button>
         </div>
     </div>
@@ -405,40 +222,105 @@
         const API_BASE = window.location.origin;
         let config = {};
 
-        // Konfiguration laden
         async function loadConfig() {
             try {
                 const response = await fetch(`${API_BASE}/api/config`);
                 config = await response.json();
                 
-                // Felder füllen
-                document.getElementById('weatherApiKey').value = config.weather.apiKey || '';
-                document.getElementById('weatherCity').value = config.weather.city || 'Basel';
-                document.getElementById('weatherCountry').value = config.weather.country || 'CH';
-                document.getElementById('weatherLat').value = config.weather.lat || 47.5596;
-                document.getElementById('weatherLon').value = config.weather.lon || 7.5886;
+                document.getElementById('weatherApiKey').value = config.weather?.apiKey || '';
+                document.getElementById('weatherCity').value = config.weather?.city || 'Basel';
+                document.getElementById('weatherCountry').value = config.weather?.country || 'CH';
+                document.getElementById('weatherLat').value = config.weather?.lat || 47.5596;
+                document.getElementById('weatherLon').value = config.weather?.lon || 7.5886;
+                document.getElementById('imageInterval').value = (config.images?.changeInterval / 1000) || 120;
+                document.getElementById('displayLocale').value = config.display?.locale || 'de-CH';
+                document.getElementById('displayTimezone').value = config.display?.timezone || 'Europe/Zurich';
                 
-                document.getElementById('imageInterval').value = (config.images.changeInterval / 1000) || 120;
+                // Abfuhr-Einstellungen
+                if (config.abfuhr) {
+                    document.getElementById('abfuhrEnabled').checked = config.abfuhr.enabled !== false;
+                    document.getElementById('abfuhrZone').value = config.abfuhr.zone || 'A';
+                    document.getElementById('abfuhrReminderDays').value = config.abfuhr.reminderDaysBefore || 1;
+                    
+                    const types = config.abfuhr.showTypes || ['Kehricht', 'Papier', 'Karton', 'Grüngut', 'Metall', 'Sperrgut'];
+                    document.querySelectorAll('#abfuhrTypesGroup input[type="checkbox"]').forEach(cb => {
+                        cb.checked = types.includes(cb.value);
+                    });
+                }
                 
-                document.getElementById('displayLocale').value = config.display.locale || 'de-CH';
-                document.getElementById('displayTimezone').value = config.display.timezone || 'Europe/Zurich';
-
-                // Kalender anzeigen
                 renderCalendars();
-                
-                // Bildquellen anzeigen
                 renderImageSources();
+                loadAbfuhrPreview();
             } catch (error) {
                 console.error('Fehler beim Laden der Konfiguration:', error);
             }
         }
 
-        // Kalender anzeigen
+        async function loadAbfuhrPreview() {
+            try {
+                const response = await fetch(`${API_BASE}/api/abfuhr`);
+                const data = await response.json();
+                const container = document.getElementById('abfuhrPreviewContent');
+                
+                if (!data.enabled || !data.upcoming || data.upcoming.length === 0) {
+                    container.innerHTML = '<div style="opacity: 0.6;">Keine Abfuhren gefunden oder deaktiviert.</div>';
+                    return;
+                }
+                
+                const icons = { 'kehricht': '🗑️', 'papier': '📰', 'karton': '📦', 'grüngut': '🌿', 'grungut': '🌿', 'metall': '🔧', 'sperrgut': '🛋️' };
+                const getIcon = (type) => { for (const [k, v] of Object.entries(icons)) if (type.toLowerCase().includes(k)) return v; return '♻️'; };
+                
+                container.innerHTML = data.upcoming.slice(0, 5).map(item => `
+                    <div class="preview-item">
+                        <span class="preview-icon">${getIcon(item.type)}</span>
+                        <span style="flex: 1;">${item.type}</span>
+                        <span style="opacity: 0.7;">${item.dateFormatted}</span>
+                        <span style="background: ${item.daysUntil <= 1 ? '#f59e0b' : 'rgba(255,255,255,0.1)'}; padding: 2px 8px; border-radius: 10px; font-size: 12px;">
+                            ${item.daysUntil === 0 ? 'Heute' : item.daysUntil === 1 ? 'Morgen' : item.daysUntil + ' Tage'}
+                        </span>
+                    </div>
+                `).join('') + `<div style="font-size: 11px; opacity: 0.5; margin-top: 10px;">Zone ${data.zone} | Aktualisiert: ${data.lastUpdate ? new Date(data.lastUpdate).toLocaleString('de-CH') : 'Nie'}</div>`;
+            } catch (error) {
+                document.getElementById('abfuhrPreviewContent').innerHTML = '<div style="color: #f87171;">Fehler beim Laden der Vorschau</div>';
+            }
+        }
+
+        async function saveAbfuhrSettings() {
+            const showTypes = [];
+            document.querySelectorAll('#abfuhrTypesGroup input[type="checkbox"]:checked').forEach(cb => showTypes.push(cb.value));
+            
+            try {
+                await fetch(`${API_BASE}/api/abfuhr/config`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                        enabled: document.getElementById('abfuhrEnabled').checked,
+                        zone: document.getElementById('abfuhrZone').value,
+                        reminderDaysBefore: parseInt(document.getElementById('abfuhrReminderDays').value),
+                        showTypes: showTypes
+                    })
+                });
+                showSuccess('Abfuhr-Einstellungen gespeichert');
+                loadAbfuhrPreview();
+            } catch (error) {
+                showError('Fehler beim Speichern');
+            }
+        }
+
+        async function refreshAbfuhrCache() {
+            try {
+                await fetch(`${API_BASE}/api/abfuhr/refresh`, { method: 'POST' });
+                showSuccess('Cache wird aktualisiert...');
+                setTimeout(loadAbfuhrPreview, 2000);
+            } catch (error) {
+                showError('Fehler beim Aktualisieren');
+            }
+        }
+
         function renderCalendars() {
-            // Google Kalender
             const googleList = document.getElementById('googleCalendarList');
             googleList.innerHTML = '';
-            config.calendars.google.forEach(cal => {
+            (config.calendars?.google || []).forEach(cal => {
                 const div = document.createElement('div');
                 div.className = 'calendar-item';
                 div.innerHTML = `
@@ -446,20 +328,17 @@
                         <div class="color-indicator" style="background: ${cal.color};"></div>
                         <div class="calendar-info">
                             <div class="calendar-name">${cal.name}</div>
-                            <div class="calendar-url">${cal.url.substring(0, 60)}...</div>
+                            <div class="calendar-url">${cal.url.substring(0, 50)}...</div>
                         </div>
                     </div>
-                    <div class="actions">
-                        <button class="danger delete-btn" data-type="google" data-id="${cal.id}">Löschen</button>
-                    </div>
+                    <button class="danger" onclick="deleteCalendar('google', '${cal.id}')">Löschen</button>
                 `;
                 googleList.appendChild(div);
             });
 
-            // iCloud Kalender
             const icloudList = document.getElementById('icloudCalendarList');
             icloudList.innerHTML = '';
-            config.calendars.icloud.forEach(cal => {
+            (config.calendars?.icloud || []).forEach(cal => {
                 const div = document.createElement('div');
                 div.className = 'calendar-item';
                 div.innerHTML = `
@@ -467,27 +346,15 @@
                         <div class="color-indicator" style="background: ${cal.color};"></div>
                         <div class="calendar-info">
                             <div class="calendar-name">${cal.name}</div>
-                            <div class="calendar-url">${cal.url.substring(0, 60)}...</div>
+                            <div class="calendar-url">${cal.url.substring(0, 50)}...</div>
                         </div>
                     </div>
-                    <div class="actions">
-                        <button class="danger delete-btn" data-type="icloud" data-id="${cal.id}">Löschen</button>
-                    </div>
+                    <button class="danger" onclick="deleteCalendar('icloud', '${cal.id}')">Löschen</button>
                 `;
                 icloudList.appendChild(div);
             });
-
-            // Event-Listener für alle Löschen-Buttons
-            document.querySelectorAll('.delete-btn').forEach(btn => {
-                btn.addEventListener('click', function() {
-                    const type = this.getAttribute('data-type');
-                    const id = this.getAttribute('data-id');
-                    deleteCalendar(type, id);
-                });
-            });
         }
 
-        // Wetter-Einstellungen speichern
         async function saveWeatherSettings() {
             config.weather = {
                 apiKey: document.getElementById('weatherApiKey').value,
@@ -496,176 +363,113 @@
                 lat: parseFloat(document.getElementById('weatherLat').value),
                 lon: parseFloat(document.getElementById('weatherLon').value)
             };
-
             await saveConfig('Wetter-Einstellungen gespeichert');
         }
 
-        // Google Kalender hinzufügen
         async function addGoogleCalendar() {
             const name = document.getElementById('googleCalendarName').value;
             const url = document.getElementById('googleCalendarUrl').value;
             const color = document.getElementById('googleCalendarColor').value;
-
-            if (!name || !url) {
-                showError('Bitte alle Felder ausfüllen');
-                return;
-            }
-
+            if (!name || !url) { showError('Bitte alle Felder ausfüllen'); return; }
             try {
-                const response = await fetch(`${API_BASE}/api/calendars/add`, {
+                await fetch(`${API_BASE}/api/calendars/add`, {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
                     body: JSON.stringify({ type: 'google', name, url, color })
                 });
-
                 await loadConfig();
                 document.getElementById('googleCalendarName').value = '';
                 document.getElementById('googleCalendarUrl').value = '';
                 showSuccess('Google Kalender hinzugefügt');
-            } catch (error) {
-                showError('Fehler beim Hinzufügen des Kalenders');
-            }
+            } catch (error) { showError('Fehler beim Hinzufügen'); }
         }
 
-        // iCloud Kalender hinzufügen
         async function addIcloudCalendar() {
             const name = document.getElementById('icloudCalendarName').value;
             const url = document.getElementById('icloudCalendarUrl').value;
             const color = document.getElementById('icloudCalendarColor').value;
-
-            if (!name || !url) {
-                showError('Bitte alle Felder ausfüllen');
-                return;
-            }
-
+            if (!name || !url) { showError('Bitte alle Felder ausfüllen'); return; }
             try {
-                const response = await fetch(`${API_BASE}/api/calendars/add`, {
+                await fetch(`${API_BASE}/api/calendars/add`, {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
                     body: JSON.stringify({ type: 'icloud', name, url, color })
                 });
-
                 await loadConfig();
                 document.getElementById('icloudCalendarName').value = '';
                 document.getElementById('icloudCalendarUrl').value = '';
                 showSuccess('iCloud Kalender hinzugefügt');
-            } catch (error) {
-                showError('Fehler beim Hinzufügen des Kalenders');
-            }
+            } catch (error) { showError('Fehler beim Hinzufügen'); }
         }
 
-        // Kalender löschen
         async function deleteCalendar(type, id) {
             if (!confirm('Kalender wirklich löschen?')) return;
-
             try {
-                await fetch(`${API_BASE}/api/calendars/${type}/${id}`, {
-                    method: 'DELETE'
-                });
-
+                await fetch(`${API_BASE}/api/calendars/${type}/${id}`, { method: 'DELETE' });
                 await loadConfig();
                 showSuccess('Kalender gelöscht');
-            } catch (error) {
-                showError('Fehler beim Löschen des Kalenders');
-            }
+            } catch (error) { showError('Fehler beim Löschen'); }
         }
 
-        // Bild-Einstellungen speichern
         async function saveImageSettings() {
             config.images.changeInterval = parseInt(document.getElementById('imageInterval').value) * 1000;
             await saveConfig('Bild-Einstellungen gespeichert');
         }
 
-        // Bildquelle hinzufügen
         async function addImageSource() {
             const type = document.getElementById('imageSourceType').value;
             const name = document.getElementById('imageSourceName').value;
             const url = type !== 'local_folder' ? document.getElementById('imageSourceUrl').value : '';
             const path = type === 'local_folder' ? document.getElementById('imageSourcePath').value : '';
-
-            if (!name || (!url && !path)) {
-                showError('Bitte alle Felder ausfüllen');
-                return;
-            }
-
+            if (!name || (!url && !path)) { showError('Bitte alle Felder ausfüllen'); return; }
             try {
-                const response = await fetch(`${API_BASE}/api/images/add`, {
+                await fetch(`${API_BASE}/api/images/add`, {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
                     body: JSON.stringify({ type, name, url, path })
                 });
-
                 await loadConfig();
                 document.getElementById('imageSourceName').value = '';
                 document.getElementById('imageSourceUrl').value = '';
                 document.getElementById('imageSourcePath').value = '';
-                renderImageSources();
                 showSuccess('Bildquelle hinzugefügt');
-            } catch (error) {
-                showError('Fehler beim Hinzufügen der Bildquelle');
-            }
+            } catch (error) { showError('Fehler beim Hinzufügen'); }
         }
 
-        // Bildquelle löschen
         async function deleteImageSource(id) {
             if (!confirm('Bildquelle wirklich löschen?')) return;
-
             try {
-                await fetch(`${API_BASE}/api/images/${id}`, {
-                    method: 'DELETE'
-                });
-
+                await fetch(`${API_BASE}/api/images/${id}`, { method: 'DELETE' });
                 await loadConfig();
-                renderImageSources();
                 showSuccess('Bildquelle gelöscht');
-            } catch (error) {
-                showError('Fehler beim Löschen der Bildquelle');
-            }
+            } catch (error) { showError('Fehler beim Löschen'); }
         }
 
-        // Bildquellen anzeigen
         function renderImageSources() {
             const list = document.getElementById('imageSourceList');
             list.innerHTML = '';
-            
-            config.images.sources.forEach(source => {
+            (config.images?.sources || []).forEach(source => {
                 const div = document.createElement('div');
                 div.className = 'image-item';
                 div.innerHTML = `
                     <div style="flex: 1;">
-                        <div style="font-weight: 600; margin-bottom: 5px;">${source.name}</div>
-                        <div style="font-size: 12px; color: #666;">
-                            ${source.type === 'icloud_shared' ? 'iCloud Shared Album' : 'Einzelne URL'}<br>
-                            ${source.url.substring(0, 50)}...
-                        </div>
+                        <div style="font-weight: 600;">${source.name}</div>
+                        <div style="font-size: 12px; color: #666;">${source.type === 'local_folder' ? 'Ordner: ' + source.path : source.url?.substring(0, 50) + '...'}</div>
                     </div>
-                    <div class="actions">
-                        <button class="danger delete-img-btn" data-id="${source.id}">Löschen</button>
-                    </div>
+                    <button class="danger" onclick="deleteImageSource('${source.id}')">Löschen</button>
                 `;
                 list.appendChild(div);
             });
-
-            // Event-Listener für Löschen-Buttons
-            document.querySelectorAll('.delete-img-btn').forEach(btn => {
-                btn.addEventListener('click', function() {
-                    const id = this.getAttribute('data-id');
-                    deleteImageSource(id);
-                });
-            });
         }
 
-        // Anzeige-Einstellungen speichern
         async function saveDisplaySettings() {
             config.display = {
                 locale: document.getElementById('displayLocale').value,
                 timezone: document.getElementById('displayTimezone').value
             };
-
             await saveConfig('Anzeige-Einstellungen gespeichert');
         }
 
-        // Konfiguration speichern
         async function saveConfig(message) {
             try {
                 await fetch(`${API_BASE}/api/config`, {
@@ -673,14 +477,10 @@
                     headers: { 'Content-Type': 'application/json' },
                     body: JSON.stringify(config)
                 });
-
                 showSuccess(message);
-            } catch (error) {
-                showError('Fehler beim Speichern');
-            }
+            } catch (error) { showError('Fehler beim Speichern'); }
         }
 
-        // Nachrichten anzeigen
         function showSuccess(message) {
             const el = document.getElementById('successMessage');
             el.textContent = message;
@@ -695,47 +495,16 @@
             setTimeout(() => el.style.display = 'none', 3000);
         }
 
-        // Beim Laden
-        loadConfig();
-        
-        // Event-Listener für Formular-Umschaltung - nach DOM geladen
         document.addEventListener('DOMContentLoaded', function() {
-            // Fix für alle onclick Buttons - manchmal funktionieren inline onclick nicht
-            document.querySelectorAll('button[onclick]').forEach(btn => {
-                const onclickAttr = btn.getAttribute('onclick');
-                if (onclickAttr) {
-                    btn.addEventListener('click', function(e) {
-                        e.preventDefault();
-                        eval(onclickAttr);
-                    });
-                }
-            });
-            
-            // Event-Listener für Typ-Auswahl
             const typeSelect = document.getElementById('imageSourceType');
-            if (typeSelect) {
-                typeSelect.addEventListener('change', function() {
-                    const type = this.value;
-                    const urlField = document.getElementById('urlField');
-                    const pathField = document.getElementById('pathField');
-                    
-                    if (type === 'local_folder') {
-                        urlField.style.display = 'none';
-                        pathField.style.display = 'block';
-                    } else {
-                        urlField.style.display = 'block';
-                        pathField.style.display = 'none';
-                    }
-                });
-                
-                // Initial trigger basierend auf aktuellem Wert
-                const currentType = typeSelect.value;
-                if (currentType === 'local_folder') {
-                    document.getElementById('urlField').style.display = 'none';
-                    document.getElementById('pathField').style.display = 'block';
-                }
-            }
+            typeSelect.addEventListener('change', function() {
+                document.getElementById('urlField').style.display = this.value === 'local_folder' ? 'none' : 'block';
+                document.getElementById('pathField').style.display = this.value === 'local_folder' ? 'block' : 'none';
+            });
+            typeSelect.dispatchEvent(new Event('change'));
         });
+
+        loadConfig();
     </script>
 </body>
 </html>
