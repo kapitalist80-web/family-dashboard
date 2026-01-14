@@ -379,13 +379,12 @@ app.get('/api/abfuhr', async (req, res) => {
     } else {
       // Lade Daten von Basel Open Data API
       // API Dokumentation: https://data.bs.ch/explore/dataset/100096/
-      // Wichtig: refine Parameter für Filter verwenden
+      // Format: refine=zone:"GUF"&refine=termin:"2026"
       const currentYear = now.getFullYear();
-      const nextYear = currentYear + 1;
       
-      // Baue API URL mit refine Parametern
-      // Format: refine=zone:"GUF"
-      const apiUrl = `https://data.bs.ch/api/explore/v2.1/catalog/datasets/100096/records?limit=100&refine=zone%3A%22${encodeURIComponent(zone)}%22&order_by=termin`;
+      // API URL mit Zone und Jahr Filter
+      // Ohne select Parameter um alle Felder zu bekommen (termin, art, zone, gebiet)
+      const apiUrl = `https://data.bs.ch/api/explore/v2.1/catalog/datasets/100096/records?limit=100&refine=zone%3A%22${zone}%22&refine=termin%3A%22${currentYear}%22&order_by=termin`;
       
       try {
         console.log('Lade Abfuhrdaten von API:', apiUrl);
