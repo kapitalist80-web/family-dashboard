@@ -50,7 +50,7 @@ Ein DakBoard-ähnliches Dashboard für deinen Raspberry Pi mit Hochkant-Monitor.
 
 ```bash
 # Repository klonen
-git clone https://github.com/DEIN-USERNAME/family-dashboard.git
+git clone https://github.com/kapitalist80-web/family-dashboard.git
 cd family-dashboard
 
 # Abhängigkeiten installieren
@@ -86,7 +86,7 @@ sudo apt install -y nodejs git
 ```bash
 # Repository klonen
 cd ~
-git clone https://github.com/DEIN-USERNAME/family-dashboard.git
+git clone https://github.com/kapitalist80-web/family-dashboard.git
 cd family-dashboard
 
 # Abhängigkeiten installieren

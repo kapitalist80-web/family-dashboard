@@ -707,13 +707,32 @@
                     return;
                 }
 
-                // Erinnerungen anzeigen (Abfuhren morgen)
+                // Erinnerungen anzeigen
                 const reminderEl = document.getElementById('abfuhrReminder');
                 const reminderItemsEl = document.getElementById('abfuhrReminderItems');
                 const containerEl = document.getElementById('mainContainer');
                 
-                if (data.reminders && data.reminders.length > 0) {
-                    reminderItemsEl.innerHTML = data.reminders.map(item => `
+                // Prüfe ob heute Abfuhrtag ist
+                const todayItems = data.todayItems || [];
+                // Prüfe ob morgen Abfuhrtag ist
+                const tomorrowItems = data.reminders || [];
+                
+                if (todayItems.length > 0) {
+                    // Heute ist Abfuhrtag!
+                    reminderEl.style.background = 'linear-gradient(135deg, #ef4444 0%, #dc2626 100%)';
+                    reminderEl.querySelector('.abfuhr-reminder-text').textContent = '🚨 Heute ist Abfuhrtag!';
+                    reminderItemsEl.innerHTML = todayItems.map(item => `
+                        <span class="abfuhr-reminder-item">
+                            ${getAbfuhrIcon(item.type)} ${item.type}
+                        </span>
+                    `).join('');
+                    reminderEl.classList.add('visible');
+                    containerEl.classList.add('with-reminder');
+                } else if (tomorrowItems.length > 0) {
+                    // Morgen ist Abfuhrtag
+                    reminderEl.style.background = 'linear-gradient(135deg, #f59e0b 0%, #d97706 100%)';
+                    reminderEl.querySelector('.abfuhr-reminder-text').textContent = '🗑️ Morgen ist Abfuhrtag!';
+                    reminderItemsEl.innerHTML = tomorrowItems.map(item => `
                         <span class="abfuhr-reminder-item">
                             ${getAbfuhrIcon(item.type)} ${item.type}
                         </span>
@@ -757,7 +776,8 @@
                     }).join('');
                     panelEl.classList.add('visible');
                 } else {
-                    panelEl.classList.remove('visible');
+                    listEl.innerHTML = '<div style="opacity: 0.6; font-size: 0.8rem;">Keine Termine gefunden für Zone ' + (data.zone || '?') + '</div>';
+                    panelEl.classList.add('visible');
                 }
 
             } catch (error) {

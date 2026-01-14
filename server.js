@@ -347,8 +347,9 @@ app.get('/api/calendars', async (req, res) => {
 // Cache für Abfuhrtermine (wird einmal täglich aktualisiert)
 let abfuhrCache = {
   data: [],
+  zone: '',
   lastUpdate: 0,
-  cacheTime: 24 * 60 * 60 * 1000 // 24 Stunden Cache
+  cacheTime: 6 * 60 * 60 * 1000 // 6 Stunden Cache
 };
 
 // Abfuhrtermine von Basel Open Data API abrufen
@@ -366,45 +367,63 @@ app.get('/api/abfuhr', async (req, res) => {
     const now = new Date();
     const today = new Date(now.getFullYear(), now.getMonth(), now.getDate());
     
-    // Prüfe Cache
+    // Prüfe Cache (auch Zone prüfen - bei Zonenwechsel neu laden)
     let abfuhrData = [];
-    if (abfuhrCache.data.length > 0 && (Date.now() - abfuhrCache.lastUpdate) < abfuhrCache.cacheTime) {
+    const cacheValid = abfuhrCache.data.length > 0 && 
+                       abfuhrCache.zone === zone &&
+                       (Date.now() - abfuhrCache.lastUpdate) < abfuhrCache.cacheTime;
+    
+    if (cacheValid) {
       abfuhrData = abfuhrCache.data;
-      console.log('Verwende gecachte Abfuhrdaten');
+      console.log('Verwende gecachte Abfuhrdaten für Zone', zone);
     } else {
       // Lade Daten von Basel Open Data API
-      // API: https://data.bs.ch/api/explore/v2.1/catalog/datasets/100096/records
-      // Filter nach Zone und aktuellem Jahr
+      // API Dokumentation: https://data.bs.ch/explore/dataset/100096/
+      // Wichtig: refine Parameter für Filter verwenden
       const currentYear = now.getFullYear();
-      const apiUrl = `https://data.bs.ch/api/explore/v2.1/catalog/datasets/100096/records?where=zone%3D%27${zone}%27&limit=100&order_by=termin`;
+      const nextYear = currentYear + 1;
+      
+      // Baue API URL mit refine Parametern
+      // Format: refine=zone:"GUF"
+      const apiUrl = `https://data.bs.ch/api/explore/v2.1/catalog/datasets/100096/records?limit=100&refine=zone%3A%22${encodeURIComponent(zone)}%22&order_by=termin`;
       
       try {
         console.log('Lade Abfuhrdaten von API:', apiUrl);
         const response = await fetch(apiUrl, {
-          timeout: 10000,
+          timeout: 15000,
           headers: {
-            'Accept': 'application/json'
+            'Accept': 'application/json',
+            'User-Agent': 'FamilyDashboard/1.1'
           }
         });
         
         if (response.ok) {
           const data = await response.json();
+          console.log('API Antwort erhalten, total_count:', data.total_count);
           
           if (data.results && data.results.length > 0) {
+            // Debug: Zeige erstes Ergebnis
+            console.log('Erstes Ergebnis:', JSON.stringify(data.results[0]));
+            
             abfuhrData = data.results.map(record => ({
+              // Feldnamen aus der API: termin, art, zone, gebiet
               date: record.termin,
-              type: record.art,
+              type: record.art || 'Unbekannt',
               zone: record.zone,
               area: record.gebiet || ''
             }));
             
             // Cache aktualisieren
             abfuhrCache.data = abfuhrData;
+            abfuhrCache.zone = zone;
             abfuhrCache.lastUpdate = Date.now();
             console.log(`${abfuhrData.length} Abfuhrtermine geladen für Zone ${zone}`);
+          } else {
+            console.log('Keine Ergebnisse in API-Antwort');
           }
         } else {
-          console.error('API-Fehler:', response.status, response.statusText);
+          const errorText = await response.text();
+          console.error('API-Fehler:', response.status, response.statusText, errorText);
         }
       } catch (apiError) {
         console.error('Fehler beim Abrufen der Abfuhr-API:', apiError.message);
@@ -416,13 +435,23 @@ app.get('/api/abfuhr', async (req, res) => {
       }
     }
 
-    // Filtere nach angezeigten Typen und zukünftigen Terminen
+    // Filtere nach angezeigten Typen und zukünftigen/heutigen Terminen
     const filteredData = abfuhrData.filter(item => {
+      if (!item.date || !item.type) return false;
+      
       const itemDate = new Date(item.date);
       const itemDateOnly = new Date(itemDate.getFullYear(), itemDate.getMonth(), itemDate.getDate());
-      return itemDateOnly >= today && showTypes.some(type => 
+      
+      // Heute und zukünftige Termine
+      const isCurrentOrFuture = itemDateOnly >= today;
+      
+      // Typ-Filter: Prüfe ob einer der showTypes im art-Feld enthalten ist
+      // API liefert z.B. "Papierabfuhr", "Kehrichtabfuhr", etc.
+      const typeMatches = showTypes.some(type => 
         item.type.toLowerCase().includes(type.toLowerCase())
       );
+      
+      return isCurrentOrFuture && typeMatches;
     });
 
     // Sortiere nach Datum
@@ -438,16 +467,29 @@ app.get('/api/abfuhr', async (req, res) => {
       return itemDateOnly.getTime() === reminderDate.getTime();
     });
 
+    // Finde auch heutige Abfuhren (für "Heute ist Abfuhrtag")
+    const todayItems = filteredData.filter(item => {
+      const itemDate = new Date(item.date);
+      const itemDateOnly = new Date(itemDate.getFullYear(), itemDate.getMonth(), itemDate.getDate());
+      return itemDateOnly.getTime() === today.getTime();
+    });
+
     // Nächste 10 Abfuhren
-    const upcoming = filteredData.slice(0, 10).map(item => ({
-      ...item,
-      dateFormatted: new Date(item.date).toLocaleDateString('de-CH', {
-        weekday: 'short',
-        day: 'numeric',
-        month: 'short'
-      }),
-      daysUntil: Math.ceil((new Date(item.date) - today) / (1000 * 60 * 60 * 24))
-    }));
+    const upcoming = filteredData.slice(0, 10).map(item => {
+      const itemDate = new Date(item.date);
+      const itemDateOnly = new Date(itemDate.getFullYear(), itemDate.getMonth(), itemDate.getDate());
+      const daysUntil = Math.round((itemDateOnly - today) / (1000 * 60 * 60 * 24));
+      
+      return {
+        ...item,
+        dateFormatted: itemDate.toLocaleDateString('de-CH', {
+          weekday: 'short',
+          day: 'numeric',
+          month: 'short'
+        }),
+        daysUntil: daysUntil
+      };
+    });
 
     res.json({
       enabled: true,
@@ -460,7 +502,12 @@ app.get('/api/abfuhr', async (req, res) => {
           month: 'long'
         })
       })),
+      todayItems: todayItems.map(item => ({
+        ...item,
+        dateFormatted: 'Heute'
+      })),
       upcoming: upcoming,
+      totalLoaded: abfuhrData.length,
       lastUpdate: abfuhrCache.lastUpdate ? new Date(abfuhrCache.lastUpdate).toISOString() : null
     });
 
@@ -493,7 +540,7 @@ app.post('/api/abfuhr/config', (req, res) => {
 
 // Verfügbare Abfuhrzonen abrufen
 app.get('/api/abfuhr/zones', (req, res) => {
-  // Basel-Stadt Abfuhrzonen
+  // Basel-Stadt Abfuhrzonen (IDs wie in der API verwendet)
   const zones = [
     { id: 'A', name: 'Zone A', description: 'Altstadt Grossbasel, Vorstädte, Am Ring' },
     { id: 'B', name: 'Zone B', description: 'Clara, Wettstein, Hirzbrunnen' },
@@ -502,7 +549,7 @@ app.get('/api/abfuhr/zones', (req, res) => {
     { id: 'E', name: 'Zone E', description: 'Gotthelf, Iselin, St. Johann' },
     { id: 'F', name: 'Zone F', description: 'Matthäus, Klybeck, Kleinhüningen' },
     { id: 'G', name: 'Zone G', description: 'Rosental, Erlenmatt' },
-    { id: 'G-UF', name: 'Zone G-UF', description: 'Rosental Unterflur' },
+    { id: 'GUF', name: 'Zone GUF', description: 'Rosental Unterflur' },
     { id: 'H', name: 'Zone H', description: 'Riehen, Bettingen' }
   ];
   res.json(zones);
@@ -512,6 +559,8 @@ app.get('/api/abfuhr/zones', (req, res) => {
 app.post('/api/abfuhr/refresh', (req, res) => {
   abfuhrCache.lastUpdate = 0;
   abfuhrCache.data = [];
+  abfuhrCache.zone = '';
+  console.log('Abfuhr-Cache manuell geleert');
   res.json({ success: true, message: 'Cache geleert' });
 });
 
