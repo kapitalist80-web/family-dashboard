@@ -46,6 +46,22 @@ let config = {
     reminderDaysBefore: 1, // Erinnerung X Tage vor Abfuhr
     showTypes: ['Kehricht', 'Papier', 'Karton', 'Grüngut', 'Metall', 'Sperrgut'] // Welche Abfuhrtypen angezeigt werden
   },
+  // NEU: Stundenplan-Konfiguration
+  schedule: {
+    enabled: true,
+    children: []
+    // Beispiel-Kind:
+    // {
+    //   id: '1234567890',
+    //   name: 'Max',
+    //   color: '#4ade80',
+    //   timetable: {
+    //     monday:    { morningStart: '08:00', morningSubjects: ['Mathe','Deutsch','NMG'], lunchStart: '12:00', afternoonStart: '13:30', afternoonSubjects: ['Sport','Musik'] },
+    //     tuesday:   { morningStart: '08:00', morningSubjects: ['Franz','Mathe','BG'], lunchStart: '11:50' },
+    //     ...
+    //   }
+    // }
+  },
   display: {
     locale: process.env.LOCALE || 'de-CH',
     timezone: process.env.TIMEZONE || 'Europe/Zurich'
@@ -67,6 +83,10 @@ function loadConfig() {
           reminderDaysBefore: 1,
           showTypes: ['Kehricht', 'Papier', 'Karton', 'Grüngut', 'Metall', 'Sperrgut']
         };
+      }
+      // Stelle sicher, dass schedule-Konfiguration existiert
+      if (!config.schedule) {
+        config.schedule = { enabled: true, children: [] };
       }
       console.log('Konfiguration geladen aus config.json');
     }
@@ -565,6 +585,112 @@ app.post('/api/abfuhr/refresh', (req, res) => {
 
 // ============================================
 // Ende Abfuhr-API
+// ============================================
+
+// ============================================
+// NEU: Stundenplan-API
+// ============================================
+
+const WEEKDAY_KEYS = ['sunday', 'monday', 'tuesday', 'wednesday', 'thursday', 'friday', 'saturday'];
+const WEEKDAY_NAMES_DE = ['Sonntag', 'Montag', 'Dienstag', 'Mittwoch', 'Donnerstag', 'Freitag', 'Samstag'];
+
+// Stundenplan für heute abrufen
+app.get('/api/schedule', (req, res) => {
+  try {
+    if (!config.schedule || !config.schedule.enabled) {
+      return res.json({ enabled: false, children: [] });
+    }
+
+    const now = new Date();
+    const dayIndex = now.getDay(); // 0=Sonntag, 1=Montag, ...
+    const dayKey = WEEKDAY_KEYS[dayIndex];
+    const dayName = WEEKDAY_NAMES_DE[dayIndex];
+
+    // Am Wochenende: Zeige Montag
+    const isWeekend = dayIndex === 0 || dayIndex === 6;
+    const displayDayKey = isWeekend ? 'monday' : dayKey;
+    const displayDayName = isWeekend ? 'Montag' : dayName;
+
+    const children = (config.schedule.children || []).map(child => {
+      const daySchedule = child.timetable ? child.timetable[displayDayKey] : null;
+      return {
+        id: child.id,
+        name: child.name,
+        color: child.color || '#4ade80',
+        schedule: daySchedule || null
+      };
+    });
+
+    res.json({
+      enabled: true,
+      dayName: displayDayName,
+      dayKey: displayDayKey,
+      isWeekend: isWeekend,
+      children: children
+    });
+  } catch (error) {
+    console.error('Stundenplan-Fehler:', error);
+    res.status(500).json({ error: 'Fehler beim Abrufen des Stundenplans' });
+  }
+});
+
+// Stundenplan-Konfiguration aktualisieren (ein/aus)
+app.post('/api/schedule/config', (req, res) => {
+  const { enabled } = req.body;
+  if (!config.schedule) {
+    config.schedule = { enabled: true, children: [] };
+  }
+  if (typeof enabled !== 'undefined') config.schedule.enabled = enabled;
+  saveConfig();
+  res.json({ success: true, schedule: config.schedule });
+});
+
+// Kind hinzufügen
+app.post('/api/schedule/child/add', (req, res) => {
+  const { name, color } = req.body;
+  if (!name) return res.status(400).json({ error: 'Name erforderlich' });
+
+  if (!config.schedule) config.schedule = { enabled: true, children: [] };
+
+  const child = {
+    id: Date.now().toString(),
+    name,
+    color: color || '#4ade80',
+    timetable: {}
+  };
+  config.schedule.children.push(child);
+  saveConfig();
+  res.json({ success: true, child });
+});
+
+// Kind löschen
+app.delete('/api/schedule/child/:id', (req, res) => {
+  const { id } = req.params;
+  if (!config.schedule) return res.json({ success: true });
+  config.schedule.children = config.schedule.children.filter(c => c.id !== id);
+  saveConfig();
+  res.json({ success: true });
+});
+
+// Stundenplan eines Kindes aktualisieren
+app.put('/api/schedule/child/:id', (req, res) => {
+  const { id } = req.params;
+  const { name, color, timetable } = req.body;
+
+  if (!config.schedule) return res.status(404).json({ error: 'Keine Schedule-Konfiguration' });
+  const child = config.schedule.children.find(c => c.id === id);
+  if (!child) return res.status(404).json({ error: 'Kind nicht gefunden' });
+
+  if (name) child.name = name;
+  if (color) child.color = color;
+  if (timetable) child.timetable = timetable;
+
+  saveConfig();
+  res.json({ success: true, child });
+});
+
+// ============================================
+// Ende Stundenplan-API
 // ============================================
 
 // Konfiguration abrufen

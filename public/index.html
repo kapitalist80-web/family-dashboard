@@ -537,6 +537,93 @@
             display: inline;
         }
 
+        /* Stundenplan */
+        .schedule-panel {
+            background: rgba(0,0,0,0.3);
+            backdrop-filter: blur(5px);
+            border-radius: 10px;
+            padding: 10px 15px;
+            margin-top: 10px;
+            display: none;
+        }
+
+        .schedule-panel.visible {
+            display: block;
+        }
+
+        .schedule-header {
+            font-size: 0.85rem;
+            font-weight: 600;
+            margin-bottom: 8px;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            color: #a78bfa;
+        }
+
+        .schedule-header::before {
+            content: "📚";
+        }
+
+        .schedule-weekend-hint {
+            font-size: 0.75rem;
+            font-weight: 400;
+            opacity: 0.6;
+            font-style: italic;
+        }
+
+        .schedule-row {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            padding: 4px 0;
+            font-size: 0.8rem;
+            border-bottom: 1px solid rgba(255,255,255,0.06);
+        }
+
+        .schedule-row:last-child {
+            border-bottom: none;
+        }
+
+        .schedule-child-name {
+            font-weight: 600;
+            min-width: 60px;
+            white-space: nowrap;
+        }
+
+        .schedule-time {
+            color: #4ade80;
+            font-weight: 600;
+            white-space: nowrap;
+        }
+
+        .schedule-subjects {
+            display: flex;
+            gap: 4px;
+            flex-wrap: nowrap;
+            overflow: hidden;
+        }
+
+        .schedule-subject {
+            background: rgba(255,255,255,0.1);
+            padding: 2px 7px;
+            border-radius: 4px;
+            font-size: 0.75rem;
+            white-space: nowrap;
+        }
+
+        .schedule-lunch {
+            color: #fbbf24;
+            white-space: nowrap;
+            font-size: 0.75rem;
+        }
+
+        .schedule-no-school {
+            opacity: 0.5;
+            font-style: italic;
+            font-size: 0.75rem;
+        }
+
         /* Container anpassen wenn Erinnerung sichtbar */
         .container.with-reminder {
             padding-top: 80px;
@@ -591,6 +678,15 @@
         <div class="calendar">
             <div class="month-header" id="monthHeader">November 2025</div>
             <div class="calendar-grid" id="calendarGrid"></div>
+        </div>
+
+        <!-- Stundenplan Panel -->
+        <div class="schedule-panel" id="schedulePanel">
+            <div class="schedule-header">
+                Stundenplan — <span id="scheduleDayName"></span>
+                <span class="schedule-weekend-hint" id="scheduleWeekendHint"></span>
+            </div>
+            <div id="scheduleContent"></div>
         </div>
 
         <!-- ÖV-Abfahrten Panel -->
@@ -896,6 +992,82 @@
             return cell;
         }
 
+        // Stundenplan laden
+        async function loadSchedule() {
+            try {
+                const response = await fetch(`${API_BASE}/api/schedule`);
+                const data = await response.json();
+
+                const panel = document.getElementById('schedulePanel');
+                if (!data.enabled || !data.children || data.children.length === 0) {
+                    panel.classList.remove('visible');
+                    return;
+                }
+
+                // Prüfe ob mindestens ein Kind heute Unterricht hat
+                const hasAnySchedule = data.children.some(c => c.schedule);
+                if (!hasAnySchedule && !data.isWeekend) {
+                    panel.classList.remove('visible');
+                    return;
+                }
+
+                document.getElementById('scheduleDayName').textContent = data.dayName;
+                document.getElementById('scheduleWeekendHint').textContent =
+                    data.isWeekend ? '(Wochenende — zeigt Montag)' : '';
+
+                const container = document.getElementById('scheduleContent');
+                let html = '';
+
+                for (const child of data.children) {
+                    html += `<div class="schedule-row">`;
+                    html += `<span class="schedule-child-name" style="color:${child.color}">${child.name}</span>`;
+
+                    if (!child.schedule) {
+                        html += `<span class="schedule-no-school">Kein Unterricht</span>`;
+                    } else {
+                        const s = child.schedule;
+
+                        // Vormittag
+                        if (s.morningStart) {
+                            html += `<span class="schedule-time">${s.morningStart}</span>`;
+                        }
+                        if (s.morningSubjects && s.morningSubjects.length > 0) {
+                            html += `<span class="schedule-subjects">`;
+                            html += s.morningSubjects.map(sub =>
+                                `<span class="schedule-subject">${sub}</span>`
+                            ).join('');
+                            html += `</span>`;
+                        }
+
+                        // Mittagspause
+                        if (s.lunchStart) {
+                            html += `<span class="schedule-lunch">${s.lunchStart} 🍽</span>`;
+                        }
+
+                        // Nachmittag
+                        if (s.afternoonSubjects && s.afternoonSubjects.length > 0) {
+                            if (s.afternoonStart) {
+                                html += `<span class="schedule-time">${s.afternoonStart}</span>`;
+                            }
+                            html += `<span class="schedule-subjects">`;
+                            html += s.afternoonSubjects.map(sub =>
+                                `<span class="schedule-subject">${sub}</span>`
+                            ).join('');
+                            html += `</span>`;
+                        }
+                    }
+
+                    html += `</div>`;
+                }
+
+                container.innerHTML = html;
+                panel.classList.add('visible');
+            } catch (error) {
+                console.error('Fehler beim Laden des Stundenplans:', error);
+                document.getElementById('schedulePanel').classList.remove('visible');
+            }
+        }
+
         // Hintergrundbild ändern
         async function changeBackground() {
             if (images.length === 0) {
@@ -1054,6 +1226,10 @@
 
         loadCalendar();
         setInterval(loadCalendar, 5 * 60 * 1000);
+
+        // Stundenplan laden
+        loadSchedule();
+        setInterval(loadSchedule, 15 * 60 * 1000); // Alle 15 Minuten aktualisieren
 
         // Abfuhrtermine laden
         loadAbfuhr();
