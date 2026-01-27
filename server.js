@@ -493,8 +493,8 @@ app.get('/api/abfuhr', async (req, res) => {
       return itemDateOnly.getTime() === today.getTime();
     });
 
-    // Nächste 10 Abfuhren
-    const upcoming = filteredData.slice(0, 10).map(item => {
+    // Nächste 3 Abfuhren
+    const upcoming = filteredData.slice(0, 3).map(item => {
       const itemDate = new Date(item.date);
       const itemDateOnly = new Date(itemDate.getFullYear(), itemDate.getMonth(), itemDate.getDate());
       const daysUntil = Math.round((itemDateOnly - today) / (1000 * 60 * 60 * 24));
