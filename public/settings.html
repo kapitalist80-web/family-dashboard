@@ -117,6 +117,31 @@
             </div>
         </div>
 
+        <!-- Stundenplan-Einstellungen -->
+        <div class="section">
+            <h2>📚 Stundenplan</h2>
+            <div class="info-box">
+                <h3>Stundenplan konfigurieren</h3>
+                <p>
+                    Erfasse hier die Stundenpläne deiner Kinder. Pro Wochentag kannst du Schulbeginn,
+                    Fächer (Vormittag/Nachmittag) und Mittagspause eintragen. Auf dem Dashboard wird
+                    pro Kind eine kompakte Zeile mit dem heutigen Stundenplan angezeigt.
+                </p>
+            </div>
+            <div class="form-group">
+                <label><input type="checkbox" id="scheduleEnabled" checked> Stundenplan auf Dashboard anzeigen</label>
+            </div>
+            <button onclick="saveScheduleEnabled()">Einstellung speichern</button>
+
+            <h3 style="margin-top: 30px; margin-bottom: 15px;">Kinder</h3>
+            <div class="grid">
+                <div class="form-group"><label>Name des Kindes</label><input type="text" id="childName" placeholder="z.B. Max"></div>
+                <div class="form-group"><label>Farbe</label><input type="color" id="childColor" value="#4ade80"></div>
+            </div>
+            <button onclick="addChild()">Kind hinzufügen</button>
+            <div id="childrenList" style="margin-top: 20px;"></div>
+        </div>
+
         <!-- Wetter-Einstellungen -->
         <div class="section">
             <h2>🌤️ Wetter-Einstellungen</h2>
@@ -249,6 +274,12 @@
                     });
                 }
                 
+                // Stundenplan-Einstellungen
+                if (config.schedule) {
+                    document.getElementById('scheduleEnabled').checked = config.schedule.enabled !== false;
+                }
+
+                renderChildren();
                 renderCalendars();
                 renderImageSources();
                 loadAbfuhrPreview();
@@ -285,6 +316,138 @@
                 document.getElementById('abfuhrPreviewContent').innerHTML = '<div style="color: #f87171;">Fehler beim Laden der Vorschau</div>';
             }
         }
+
+        // ========== Stundenplan ==========
+
+        const WEEKDAYS = [
+            { key: 'monday', label: 'Montag' },
+            { key: 'tuesday', label: 'Dienstag' },
+            { key: 'wednesday', label: 'Mittwoch' },
+            { key: 'thursday', label: 'Donnerstag' },
+            { key: 'friday', label: 'Freitag' }
+        ];
+
+        async function saveScheduleEnabled() {
+            try {
+                await fetch(`${API_BASE}/api/schedule/config`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ enabled: document.getElementById('scheduleEnabled').checked })
+                });
+                showSuccess('Stundenplan-Einstellung gespeichert');
+            } catch (error) { showError('Fehler beim Speichern'); }
+        }
+
+        async function addChild() {
+            const name = document.getElementById('childName').value;
+            const color = document.getElementById('childColor').value;
+            if (!name) { showError('Bitte Name eingeben'); return; }
+            try {
+                await fetch(`${API_BASE}/api/schedule/child/add`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ name, color })
+                });
+                document.getElementById('childName').value = '';
+                await loadConfig();
+                showSuccess('Kind hinzugefügt');
+            } catch (error) { showError('Fehler beim Hinzufügen'); }
+        }
+
+        async function deleteChild(id) {
+            if (!confirm('Kind und Stundenplan wirklich löschen?')) return;
+            try {
+                await fetch(`${API_BASE}/api/schedule/child/${id}`, { method: 'DELETE' });
+                await loadConfig();
+                showSuccess('Kind gelöscht');
+            } catch (error) { showError('Fehler beim Löschen'); }
+        }
+
+        async function saveChildTimetable(childId) {
+            const timetable = {};
+            for (const day of WEEKDAYS) {
+                const morningStart = document.getElementById(`tt-${childId}-${day.key}-ms`)?.value || '';
+                const morningSubjectsRaw = document.getElementById(`tt-${childId}-${day.key}-msub`)?.value || '';
+                const lunchStart = document.getElementById(`tt-${childId}-${day.key}-ls`)?.value || '';
+                const afternoonStart = document.getElementById(`tt-${childId}-${day.key}-as`)?.value || '';
+                const afternoonSubjectsRaw = document.getElementById(`tt-${childId}-${day.key}-asub`)?.value || '';
+
+                const morningSubjects = morningSubjectsRaw ? morningSubjectsRaw.split(',').map(s => s.trim()).filter(Boolean) : [];
+                const afternoonSubjects = afternoonSubjectsRaw ? afternoonSubjectsRaw.split(',').map(s => s.trim()).filter(Boolean) : [];
+
+                // Nur Tage mit Daten speichern
+                if (morningStart || morningSubjects.length > 0) {
+                    timetable[day.key] = {
+                        morningStart,
+                        morningSubjects,
+                        lunchStart,
+                        afternoonStart,
+                        afternoonSubjects
+                    };
+                }
+            }
+
+            try {
+                await fetch(`${API_BASE}/api/schedule/child/${childId}`, {
+                    method: 'PUT',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ timetable })
+                });
+                showSuccess('Stundenplan gespeichert');
+            } catch (error) { showError('Fehler beim Speichern'); }
+        }
+
+        function renderChildren() {
+            const list = document.getElementById('childrenList');
+            const children = config.schedule?.children || [];
+            if (children.length === 0) {
+                list.innerHTML = '<div style="opacity: 0.5;">Noch keine Kinder erfasst.</div>';
+                return;
+            }
+
+            list.innerHTML = children.map(child => {
+                const tt = child.timetable || {};
+                let rows = '';
+                for (const day of WEEKDAYS) {
+                    const d = tt[day.key] || {};
+                    rows += `
+                        <tr>
+                            <td style="font-weight:600; padding:6px 8px; white-space:nowrap;">${day.label}</td>
+                            <td style="padding:4px 4px;"><input type="text" id="tt-${child.id}-${day.key}-ms" value="${d.morningStart || ''}" placeholder="08:00" style="width:65px;padding:5px;"></td>
+                            <td style="padding:4px 4px;"><input type="text" id="tt-${child.id}-${day.key}-msub" value="${(d.morningSubjects || []).join(', ')}" placeholder="Mathe, Deutsch, NMG" style="width:100%;padding:5px;"></td>
+                            <td style="padding:4px 4px;"><input type="text" id="tt-${child.id}-${day.key}-ls" value="${d.lunchStart || ''}" placeholder="12:00" style="width:65px;padding:5px;"></td>
+                            <td style="padding:4px 4px;"><input type="text" id="tt-${child.id}-${day.key}-as" value="${d.afternoonStart || ''}" placeholder="13:30" style="width:65px;padding:5px;"></td>
+                            <td style="padding:4px 4px;"><input type="text" id="tt-${child.id}-${day.key}-asub" value="${(d.afternoonSubjects || []).join(', ')}" placeholder="Sport, Musik" style="width:100%;padding:5px;"></td>
+                        </tr>`;
+                }
+
+                return `
+                    <div style="background:#f9f9f9; padding:20px; border-radius:8px; margin-bottom:15px; border-left:4px solid ${child.color};">
+                        <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:15px;">
+                            <h3 style="margin:0; color:${child.color};">${child.name}</h3>
+                            <button class="danger" onclick="deleteChild('${child.id}')">Kind löschen</button>
+                        </div>
+                        <div style="overflow-x:auto;">
+                            <table style="width:100%; border-collapse:collapse; font-size:13px;">
+                                <thead>
+                                    <tr style="background:#eee; text-align:left;">
+                                        <th style="padding:8px;">Tag</th>
+                                        <th style="padding:8px;">Beginn</th>
+                                        <th style="padding:8px;">Vormittag (Fächer mit Komma trennen)</th>
+                                        <th style="padding:8px;">Mittag</th>
+                                        <th style="padding:8px;">NM-Beginn</th>
+                                        <th style="padding:8px;">Nachmittag (Fächer mit Komma trennen)</th>
+                                    </tr>
+                                </thead>
+                                <tbody>${rows}</tbody>
+                            </table>
+                        </div>
+                        <button onclick="saveChildTimetable('${child.id}')" style="margin-top:15px;">Stundenplan speichern</button>
+                    </div>`;
+            }).join('');
+        }
+
+        // ========== Abfuhr ==========
 
         async function saveAbfuhrSettings() {
             const showTypes = [];
