@@ -456,11 +456,13 @@
         .calendar {
             flex: 0 1 auto;
             max-height: 65vh;
-            background: rgba(0,0,0,0.2);
+            background: rgba(0,0,0,0.08);
             border-radius: 12px;
             padding: 20px;
-            overflow: hidden;
+            overflow: visible;
             margin-top: 10px;
+            position: relative;
+            z-index: 1;
         }
 
         .month-header {
@@ -483,11 +485,12 @@
             font-weight: 600;
             padding: 10px 5px;
             font-size: 0.9rem;
-            background: rgba(255,255,255,0.1);
+            background: rgba(255,255,255,0.05);
+            text-shadow: 1px 1px 3px rgba(0,0,0,0.8);
         }
 
         .calendar-day {
-            background: rgba(255,255,255,0.05);
+            background: rgba(255,255,255,0.02);
             padding: 8px;
             min-height: 120px;
             display: flex;
@@ -501,7 +504,7 @@
         }
 
         .calendar-day.today {
-            background: rgba(220, 38, 38, 0.6);
+            background: rgba(220, 38, 38, 0.3);
             font-weight: bold;
         }
 
@@ -509,6 +512,7 @@
             font-size: 1.3rem;
             margin-bottom: 5px;
             font-weight: 500;
+            text-shadow: 1px 1px 3px rgba(0,0,0,0.8);
         }
 
         .events {
@@ -517,7 +521,7 @@
         }
 
         .event {
-            background: rgba(66, 133, 244, 0.8);
+            background: rgba(66, 133, 244, 0.3);
             padding: 5px 7px;
             margin: 3px 0;
             border-radius: 3px;
@@ -529,6 +533,7 @@
             -webkit-box-orient: vertical;
             line-height: 1.4;
             min-height: 2.8em;
+            text-shadow: 1px 1px 3px rgba(0,0,0,0.9), 0 0 6px rgba(0,0,0,0.5);
         }
 
         .event-time {
@@ -539,12 +544,14 @@
 
         /* Stundenplan */
         .schedule-panel {
-            background: rgba(0,0,0,0.3);
-            backdrop-filter: blur(5px);
+            background: rgba(0,0,0,0.45);
+            backdrop-filter: blur(8px);
             border-radius: 10px;
             padding: 10px 15px;
             margin-top: 10px;
             display: none;
+            position: relative;
+            z-index: 3;
         }
 
         .schedule-panel.visible {
@@ -978,7 +985,7 @@
                 const eventEl = document.createElement('div');
                 eventEl.className = 'event';
                 eventEl.style.borderLeftColor = event.color;
-                eventEl.style.background = `${event.color}dd`;
+                eventEl.style.background = `${event.color}40`;
                 
                 const eventTime = new Date(event.start);
                 const timeStr = event.allDay ? '' : 
