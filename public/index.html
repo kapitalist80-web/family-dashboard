@@ -718,6 +718,7 @@
         const API_BASE = window.location.origin;
         let currentImageIndex = 0;
         let images = [];
+        let shuffledImages = [];
         let events = [];
         let config = {
             images: { changeInterval: 120000 }
@@ -1075,23 +1076,39 @@
             }
         }
 
-        // Hintergrundbild ändern
+        // Fisher-Yates Shuffle - mischt Array gleichmäßig zufällig
+        function shuffleArray(arr) {
+            const shuffled = [...arr];
+            for (let i = shuffled.length - 1; i > 0; i--) {
+                const j = Math.floor(Math.random() * (i + 1));
+                [shuffled[i], shuffled[j]] = [shuffled[j], shuffled[i]];
+            }
+            return shuffled;
+        }
+
+        // Hintergrundbild ändern (zufällige Reihenfolge)
         async function changeBackground() {
             if (images.length === 0) {
                 await loadImages();
             }
-            
+
             if (images.length === 0) return;
-            
+
+            currentImageIndex++;
+            // Wenn alle Bilder gezeigt wurden, neu mischen
+            if (currentImageIndex >= shuffledImages.length) {
+                shuffledImages = shuffleArray(images);
+                currentImageIndex = 0;
+            }
+
             const img = document.getElementById('background');
-            const nextIndex = (currentImageIndex + 1) % images.length;
-            
+            const nextImage = shuffledImages[currentImageIndex];
+
             // Crossfade-Effekt
             img.style.opacity = 0;
             setTimeout(() => {
-                img.src = images[nextIndex].url || images[nextIndex];
+                img.src = nextImage;
                 img.style.opacity = 1;
-                currentImageIndex = nextIndex;
             }, 1000);
         }
 
@@ -1101,9 +1118,15 @@
                 const response = await fetch(`${API_BASE}/api/images`);
                 const imageData = await response.json();
                 images = imageData.map(img => img.url || img);
-                
-                if (images.length > 0 && document.getElementById('background').src === '') {
-                    document.getElementById('background').src = images[0];
+
+                if (images.length > 0) {
+                    // Bilder mischen und mit zufälligem Bild starten
+                    shuffledImages = shuffleArray(images);
+                    currentImageIndex = 0;
+                    const img = document.getElementById('background');
+                    if (!img.src || img.src === window.location.href) {
+                        img.src = shuffledImages[0];
+                    }
                 }
             } catch (error) {
                 console.error('Fehler beim Laden der Bilder:', error);
@@ -1112,6 +1135,8 @@
                     'https://picsum.photos/1080/1920?random=2',
                     'https://picsum.photos/1080/1920?random=3'
                 ];
+                shuffledImages = shuffleArray(images);
+                currentImageIndex = 0;
             }
         }
 
