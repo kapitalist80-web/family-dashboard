@@ -1,0 +1,71 @@
+{
+  "child": {
+    "name": "Aris",
+    "color": "#38bdf8"
+  },
+  "display": {
+    "locale": "de-CH",
+    "timezone": "Europe/Zurich",
+    "showWeekend": false,
+    "refreshMinutes": 15,
+    "rolloverWeekday": 5,
+    "rolloverHour": 17,
+    "nightMode": {
+      "enabled": true,
+      "from": "21:00",
+      "to": "06:30",
+      "dim": 0.75
+    }
+  },
+  "calendars": [
+    {
+      "id": "beispiel",
+      "name": "Familie",
+      "url": "https://calendar.google.com/calendar/ical/BEISPIEL%40group.calendar.google.com/public/basic.ics",
+      "color": "#a78bfa",
+      "enabled": false
+    }
+  ],
+  "timetable": {
+    "monday": [
+      { "id": "mo1", "start": "08:00", "end": "08:45", "subject": "Mathematik", "room": "B12", "teacher": "Fr. Meier", "note": "" },
+      { "id": "mo2", "start": "08:50", "end": "09:35", "subject": "Deutsch", "room": "B12", "teacher": "Fr. Meier", "note": "" },
+      { "id": "mo3", "start": "09:55", "end": "10:40", "subject": "NMG", "room": "B12", "teacher": "Hr. Roth", "note": "" },
+      { "id": "mo4", "start": "10:45", "end": "11:30", "subject": "Englisch", "room": "B14", "teacher": "Fr. Sadiku", "note": "" },
+      { "id": "mo5", "start": "13:30", "end": "14:15", "subject": "Sport", "room": "Halle", "teacher": "Hr. Roth", "note": "Turnsack" },
+      { "id": "mo6", "start": "14:20", "end": "15:05", "subject": "Musik", "room": "M1", "teacher": "Fr. Bosshart", "note": "" }
+    ],
+    "tuesday": [
+      { "id": "di1", "start": "08:00", "end": "08:45", "subject": "Deutsch", "room": "B12", "teacher": "Fr. Meier", "note": "" },
+      { "id": "di2", "start": "08:50", "end": "09:35", "subject": "Mathematik", "room": "B12", "teacher": "Fr. Meier", "note": "" },
+      { "id": "di3", "start": "09:55", "end": "10:40", "subject": "Französisch", "room": "B14", "teacher": "Fr. Sadiku", "note": "" },
+      { "id": "di4", "start": "10:45", "end": "11:30", "subject": "Bildn. Gestalten", "room": "A3", "teacher": "Hr. Kunz", "note": "" }
+    ],
+    "wednesday": [
+      { "id": "mi1", "start": "08:00", "end": "08:45", "subject": "Mathematik", "room": "B12", "teacher": "Fr. Meier", "note": "" },
+      { "id": "mi2", "start": "08:50", "end": "09:35", "subject": "NMG", "room": "B12", "teacher": "Hr. Roth", "note": "" },
+      { "id": "mi3", "start": "09:55", "end": "10:40", "subject": "Deutsch", "room": "B12", "teacher": "Fr. Meier", "note": "" },
+      { "id": "mi4", "start": "10:45", "end": "11:30", "subject": "Schwimmen", "room": "Bad", "teacher": "Hr. Roth", "note": "Badesachen" }
+    ],
+    "thursday": [
+      { "id": "do1", "start": "08:00", "end": "08:45", "subject": "Englisch", "room": "B14", "teacher": "Fr. Sadiku", "note": "" },
+      { "id": "do2", "start": "08:50", "end": "09:35", "subject": "Mathematik", "room": "B12", "teacher": "Fr. Meier", "note": "" },
+      { "id": "do3", "start": "09:55", "end": "10:40", "subject": "Deutsch", "room": "B12", "teacher": "Fr. Meier", "note": "" },
+      { "id": "do4", "start": "10:45", "end": "11:30", "subject": "NMG", "room": "B12", "teacher": "Hr. Roth", "note": "" },
+      { "id": "do5", "start": "13:30", "end": "14:15", "subject": "TTG", "room": "W2", "teacher": "Fr. Bosshart", "note": "" },
+      { "id": "do6", "start": "14:20", "end": "15:05", "subject": "TTG", "room": "W2", "teacher": "Fr. Bosshart", "note": "" }
+    ],
+    "friday": [
+      { "id": "fr1", "start": "08:00", "end": "08:45", "subject": "Französisch", "room": "B14", "teacher": "Fr. Sadiku", "note": "" },
+      { "id": "fr2", "start": "08:50", "end": "09:35", "subject": "Mathematik", "room": "B12", "teacher": "Fr. Meier", "note": "" },
+      { "id": "fr3", "start": "09:55", "end": "10:40", "subject": "Deutsch", "room": "B12", "teacher": "Fr. Meier", "note": "" },
+      { "id": "fr4", "start": "10:45", "end": "11:30", "subject": "Klassenrat", "room": "B12", "teacher": "Fr. Meier", "note": "" }
+    ],
+    "saturday": [],
+    "sunday": []
+  },
+  "exceptions": [
+    { "id": "bsp1", "date": "2026-09-09", "type": "cancelled", "subject": "Schwimmen", "text": "Bad geschlossen" },
+    { "id": "bsp2", "date": "2026-09-10", "type": "info", "subject": "", "text": "Elterngespräch 17:00" }
+  ]
+}

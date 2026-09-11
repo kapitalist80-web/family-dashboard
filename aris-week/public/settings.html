@@ -1,0 +1,169 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Einstellungen – Stundenplan</title>
+  <link rel="icon" type="image/svg+xml" href="/favicon.svg">
+  <link rel="stylesheet" href="/css/settings.css">
+</head>
+<body>
+  <div class="wrap">
+    <header class="page">
+      <h1>Einstellungen</h1>
+      <span class="spacer"></span>
+      <a class="back" href="/">&#8592; zur Anzeige</a>
+    </header>
+
+    <section class="card">
+      <h2>Kind &amp; Anzeige</h2>
+      <div class="row">
+        <div class="field">
+          <label for="childName">Name</label>
+          <input type="text" id="childName" placeholder="Aris">
+        </div>
+        <div class="field">
+          <label for="childColor">Farbe</label>
+          <input type="color" id="childColor" value="#38bdf8">
+        </div>
+        <div class="field">
+          <label for="locale">Sprache/Region</label>
+          <input type="text" id="locale" placeholder="de-CH">
+        </div>
+        <div class="field">
+          <label for="timezone">Zeitzone</label>
+          <input type="text" id="timezone" placeholder="Europe/Zurich" style="width:150px">
+        </div>
+        <div class="field">
+          <label for="refreshMinutes">Aktualisierung (Min.)</label>
+          <input type="number" id="refreshMinutes" min="1" max="240" style="width:110px">
+        </div>
+        <div class="field">
+          <label for="showWeekend">Wochenende zeigen</label>
+          <input type="checkbox" id="showWeekend">
+        </div>
+      </div>
+      <div class="row">
+        <div class="field">
+          <label for="rolloverWeekday">Nächste Woche ab</label>
+          <select id="rolloverWeekday">
+            <option value="-1">nie automatisch</option>
+            <option value="1">Montag</option>
+            <option value="2">Dienstag</option>
+            <option value="3">Mittwoch</option>
+            <option value="4">Donnerstag</option>
+            <option value="5">Freitag</option>
+            <option value="6">Samstag</option>
+            <option value="0">Sonntag</option>
+          </select>
+        </div>
+        <div class="field">
+          <label for="rolloverHour">ab Uhrzeit</label>
+          <input type="number" id="rolloverHour" min="0" max="23" style="width:90px">
+        </div>
+        <div class="field">
+          <label for="nightEnabled">Nachtmodus</label>
+          <input type="checkbox" id="nightEnabled">
+        </div>
+        <div class="field">
+          <label for="nightFrom">von</label>
+          <input type="time" id="nightFrom" style="width:110px">
+        </div>
+        <div class="field">
+          <label for="nightTo">bis</label>
+          <input type="time" id="nightTo" style="width:110px">
+        </div>
+        <div class="field">
+          <label for="nightDim">Abdunklung (0–0.95)</label>
+          <input type="number" id="nightDim" min="0" max="0.95" step="0.05" style="width:110px">
+        </div>
+      </div>
+      <button type="button" id="saveDisplay">Speichern</button>
+    </section>
+
+    <section class="card">
+      <h2>Stundenplan <span class="hint">Zeiten im Format 08:15 – leere Zeilen werden verworfen</span></h2>
+      <div class="tabs" id="dayTabs"></div>
+      <table>
+        <thead>
+          <tr>
+            <th>Von</th>
+            <th>Bis</th>
+            <th>Fach</th>
+            <th>Raum</th>
+            <th>Lehrperson</th>
+            <th>Notiz</th>
+            <th></th>
+          </tr>
+        </thead>
+        <tbody id="lessonRows"></tbody>
+      </table>
+      <div class="row" style="margin-top:10px">
+        <button type="button" id="addLesson">+ Lektion</button>
+        <button type="button" class="ghost" id="copyDay">Tag kopieren nach …</button>
+        <select id="copyTarget" style="width:150px"></select>
+        <span class="spacer"></span>
+      </div>
+      <div class="sticky-actions">
+        <button type="button" id="saveTimetable">Stundenplan speichern</button>
+        <button type="button" class="ghost" id="exportConfig">Export (JSON)</button>
+        <button type="button" class="ghost" id="importConfig">Import (JSON)</button>
+        <input type="file" id="importFile" accept="application/json" hidden>
+      </div>
+    </section>
+
+    <section class="card">
+      <h2>Kalender <span class="hint">iCal-/ICS-Adresse von Google, iCloud, Schul-Kalender …</span></h2>
+      <ul class="list" id="calendarList"></ul>
+      <div class="row" style="margin-top:10px">
+        <div class="field" style="flex:1 1 150px">
+          <label for="calName">Name</label>
+          <input type="text" id="calName" placeholder="Familie">
+        </div>
+        <div class="field" style="flex:3 1 320px">
+          <label for="calUrl">iCal-URL</label>
+          <input type="url" id="calUrl" placeholder="https://calendar.google.com/calendar/ical/…/basic.ics">
+        </div>
+        <div class="field">
+          <label for="calColor">Farbe</label>
+          <input type="color" id="calColor" value="#a78bfa">
+        </div>
+        <button type="button" id="addCalendar">Hinzufügen</button>
+      </div>
+      <p class="muted">webcal://-Adressen werden automatisch in https:// umgewandelt.</p>
+    </section>
+
+    <section class="card">
+      <h2>Ausnahmen <span class="hint">Ausfall, Vertretung oder Hinweis für ein bestimmtes Datum</span></h2>
+      <ul class="list" id="exceptionList"></ul>
+      <div class="row" style="margin-top:10px">
+        <div class="field">
+          <label for="excDate">Datum</label>
+          <input type="date" id="excDate">
+        </div>
+        <div class="field">
+          <label for="excType">Art</label>
+          <select id="excType">
+            <option value="cancelled">Fällt aus</option>
+            <option value="changed">Geändert</option>
+            <option value="info">Hinweis</option>
+          </select>
+        </div>
+        <div class="field">
+          <label for="excSubject">Fach (leer = ganzer Tag)</label>
+          <input type="text" id="excSubject" placeholder="Sport">
+        </div>
+        <div class="field" style="flex:1 1 220px">
+          <label for="excText">Text</label>
+          <input type="text" id="excText" placeholder="Exkursion, Zeugnisgespräche …">
+        </div>
+        <button type="button" id="addException">Hinzufügen</button>
+        <button type="button" class="ghost" id="cleanupExceptions">Alte entfernen</button>
+      </div>
+    </section>
+  </div>
+
+  <div class="toast" id="toast"></div>
+  <script src="/js/settings.js"></script>
+</body>
+</html>

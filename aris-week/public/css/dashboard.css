@@ -1,0 +1,446 @@
+/* Layout fuer das offizielle Raspberry Pi 7" Touch Display (V1.1): 800 x 480 px */
+
+* {
+  margin: 0;
+  padding: 0;
+  box-sizing: border-box;
+}
+
+:root {
+  --bg: #0b1220;
+  --bg-panel: rgba(255, 255, 255, 0.045);
+  --bg-panel-strong: rgba(255, 255, 255, 0.09);
+  --line: rgba(255, 255, 255, 0.1);
+  --text: #f1f5f9;
+  --text-dim: rgba(241, 245, 249, 0.62);
+  --accent: #38bdf8;
+  --today: rgba(56, 189, 248, 0.16);
+  --now: #f59e0b;
+  --cancelled: #f87171;
+  --changed: #fbbf24;
+  --gap: 5px;
+}
+
+html,
+body {
+  width: 100%;
+  height: 100%;
+  overflow: hidden;
+  background: var(--bg);
+  color: var(--text);
+  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', sans-serif;
+  -webkit-font-smoothing: antialiased;
+  user-select: none;
+  cursor: none;
+}
+
+body.with-cursor {
+  cursor: auto;
+}
+
+.app {
+  position: relative;
+  width: 100%;
+  height: 100%;
+  display: grid;
+  grid-template-rows: auto 1fr auto;
+  gap: var(--gap);
+  padding: 6px 8px;
+  background:
+    radial-gradient(120% 90% at 15% 0%, rgba(56, 189, 248, 0.14), transparent 60%),
+    radial-gradient(100% 80% at 100% 100%, rgba(168, 85, 247, 0.12), transparent 60%),
+    var(--bg);
+}
+
+/* ---------- Kopfzeile ---------- */
+
+.topbar {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 4px 6px;
+  background: var(--bg-panel);
+  border: 1px solid var(--line);
+  border-radius: 10px;
+  height: 54px;
+}
+
+.child {
+  display: flex;
+  align-items: center;
+  gap: 7px;
+  min-width: 0;
+}
+
+.child .dot {
+  width: 10px;
+  height: 10px;
+  border-radius: 50%;
+  background: var(--accent);
+  box-shadow: 0 0 10px var(--accent);
+  flex: none;
+}
+
+.child h1 {
+  font-size: 20px;
+  font-weight: 650;
+  letter-spacing: 0.2px;
+  white-space: nowrap;
+}
+
+.weekinfo {
+  display: flex;
+  flex-direction: column;
+  line-height: 1.15;
+  min-width: 0;
+}
+
+.weekinfo .range {
+  font-size: 13px;
+  font-weight: 600;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.weekinfo .kw {
+  font-size: 10px;
+  color: var(--text-dim);
+  text-transform: uppercase;
+  letter-spacing: 0.6px;
+}
+
+.clock {
+  margin-left: auto;
+  text-align: right;
+  line-height: 1.1;
+}
+
+.clock .time {
+  font-size: 26px;
+  font-weight: 300;
+  font-variant-numeric: tabular-nums;
+}
+
+.clock .today {
+  font-size: 10px;
+  color: var(--text-dim);
+  white-space: nowrap;
+}
+
+.nav {
+  display: flex;
+  gap: 4px;
+  flex: none;
+}
+
+.nav button {
+  min-width: 38px;
+  height: 38px;
+  padding: 0 9px;
+  font-size: 15px;
+  font-weight: 600;
+  color: var(--text);
+  background: var(--bg-panel-strong);
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  cursor: pointer;
+  touch-action: manipulation;
+}
+
+.nav button:active {
+  background: rgba(56, 189, 248, 0.3);
+}
+
+.nav button.hidden {
+  visibility: hidden;
+}
+
+/* ---------- Wochenraster ---------- */
+
+.week {
+  display: grid;
+  grid-template-columns: repeat(5, 1fr);
+  gap: var(--gap);
+  min-height: 0;
+}
+
+.week.weekend {
+  grid-template-columns: repeat(7, 1fr);
+}
+
+.day {
+  display: flex;
+  flex-direction: column;
+  min-height: 0;
+  background: var(--bg-panel);
+  border: 1px solid var(--line);
+  border-radius: 9px;
+  overflow: hidden;
+}
+
+.day.today {
+  background: var(--today);
+  border-color: rgba(56, 189, 248, 0.5);
+}
+
+.day-head {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 4px;
+  padding: 4px 7px;
+  border-bottom: 1px solid var(--line);
+  background: rgba(0, 0, 0, 0.2);
+}
+
+.day-head .dow {
+  font-size: 12px;
+  font-weight: 700;
+  letter-spacing: 0.4px;
+}
+
+.day.today .day-head .dow {
+  color: var(--accent);
+}
+
+.day-head .dom {
+  font-size: 10px;
+  color: var(--text-dim);
+  font-variant-numeric: tabular-nums;
+}
+
+.day-body {
+  flex: 1;
+  min-height: 0;
+  overflow-y: auto;
+  scrollbar-width: none;
+  padding: 3px 4px 4px;
+}
+
+.day-body::-webkit-scrollbar {
+  display: none;
+}
+
+/* ---------- Lektionen ---------- */
+
+.lesson {
+  display: grid;
+  grid-template-columns: 30px 1fr;
+  gap: 5px;
+  align-items: baseline;
+  padding: 3px 4px;
+  border-radius: 5px;
+  border-left: 2px solid rgba(56, 189, 248, 0.55);
+  background: rgba(255, 255, 255, 0.05);
+  margin-bottom: 3px;
+}
+
+.lesson .time {
+  font-size: 9.5px;
+  color: var(--text-dim);
+  font-variant-numeric: tabular-nums;
+  white-space: nowrap;
+}
+
+.lesson .subject {
+  font-size: 12px;
+  font-weight: 600;
+  line-height: 1.2;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.lesson .meta {
+  grid-column: 2;
+  font-size: 9.5px;
+  color: var(--text-dim);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.lesson.now {
+  border-left-color: var(--now);
+  background: rgba(245, 158, 11, 0.2);
+  box-shadow: 0 0 0 1px rgba(245, 158, 11, 0.35) inset;
+}
+
+.lesson.past {
+  opacity: 0.4;
+}
+
+.lesson.cancelled .subject {
+  text-decoration: line-through;
+  color: var(--cancelled);
+}
+
+.lesson.cancelled {
+  border-left-color: var(--cancelled);
+}
+
+.lesson.changed {
+  border-left-color: var(--changed);
+}
+
+.lesson.changed .subject {
+  color: var(--changed);
+}
+
+.break {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  margin: 2px 0 4px;
+  padding-left: 4px;
+  font-size: 9px;
+  color: var(--text-dim);
+}
+
+.break::after {
+  content: '';
+  flex: 1;
+  height: 1px;
+  background: var(--line);
+}
+
+/* ---------- Termine ---------- */
+
+.events {
+  margin-top: 4px;
+  padding-top: 4px;
+  border-top: 1px dashed var(--line);
+}
+
+.day-body.no-lessons .events {
+  border-top: none;
+  margin-top: 0;
+  padding-top: 0;
+}
+
+.event {
+  display: block;
+  padding: 3px 5px;
+  margin-bottom: 3px;
+  border-radius: 5px;
+  border-left: 2px solid var(--c, var(--accent));
+  background: color-mix(in srgb, var(--c, #38bdf8) 22%, transparent);
+  font-size: 10.5px;
+  line-height: 1.25;
+}
+
+.event .etime {
+  font-size: 9px;
+  color: var(--text-dim);
+  font-variant-numeric: tabular-nums;
+  margin-right: 3px;
+}
+
+.event .etitle {
+  display: -webkit-box;
+  -webkit-line-clamp: 2;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+}
+
+.note {
+  padding: 3px 5px;
+  margin-bottom: 3px;
+  border-radius: 5px;
+  background: rgba(251, 191, 36, 0.18);
+  border-left: 2px solid var(--changed);
+  font-size: 10px;
+  line-height: 1.25;
+}
+
+.empty {
+  padding: 10px 4px;
+  text-align: center;
+  font-size: 10px;
+  color: var(--text-dim);
+  font-style: italic;
+}
+
+/* ---------- Dichte-Stufen, damit die Woche immer auf den Schirm passt ---------- */
+
+.week.tight .lesson {
+  padding: 2px 4px;
+  margin-bottom: 2px;
+}
+
+.week.tight .lesson .subject {
+  font-size: 11px;
+}
+
+.week.tight .event {
+  font-size: 10px;
+  padding: 2px 4px;
+  margin-bottom: 2px;
+}
+
+.week.dense .lesson {
+  padding: 1px 4px;
+  margin-bottom: 2px;
+  grid-template-columns: 27px 1fr;
+}
+
+.week.dense .lesson .subject {
+  font-size: 10px;
+}
+
+.week.dense .lesson .time {
+  font-size: 8.5px;
+}
+
+.week.dense .lesson .meta {
+  display: none;
+}
+
+.week.dense .event {
+  font-size: 9px;
+  padding: 2px 4px;
+  margin-bottom: 2px;
+}
+
+.week.dense .event .etitle {
+  -webkit-line-clamp: 1;
+}
+
+/* ---------- Statuszeile ---------- */
+
+.status {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  height: 18px;
+  padding: 0 6px;
+  font-size: 9.5px;
+  color: var(--text-dim);
+}
+
+.status .spacer {
+  flex: 1;
+}
+
+.status .warn {
+  color: #fca5a5;
+}
+
+.status a {
+  color: var(--text-dim);
+  text-decoration: none;
+  font-size: 12px;
+}
+
+/* ---------- Nachtmodus ---------- */
+
+.night {
+  position: fixed;
+  inset: 0;
+  background: #000;
+  opacity: 0;
+  pointer-events: none;
+  transition: opacity 1.5s ease;
+  z-index: 50;
+}
