@@ -399,12 +399,16 @@ app.get('/api/abfuhr', async (req, res) => {
     } else {
       // Lade Daten von Basel Open Data API
       // API Dokumentation: https://data.bs.ch/explore/dataset/100096/
-      // Format: refine=zone:"GUF"&refine=termin:"2026"
-      const currentYear = now.getFullYear();
-      
-      // API URL mit Zone und Jahr Filter
-      // Ohne select Parameter um alle Felder zu bekommen (termin, art, zone, gebiet)
-      const apiUrl = `https://data.bs.ch/api/explore/v2.1/catalog/datasets/100096/records?limit=100&refine=zone%3A%22${zone}%22&refine=termin%3A%22${currentYear}%22&order_by=termin`;
+      // Nur Termine ab heute laden (limit max. 100 pro Request - mit Jahresfilter
+      // wären ab Jahresmitte nur noch vergangene Termine geladen worden)
+      const todayStr = `${today.getFullYear()}-${String(today.getMonth() + 1).padStart(2, '0')}-${String(today.getDate()).padStart(2, '0')}`;
+      const params = new URLSearchParams({
+        select: 'termin,art,zone',
+        where: `zone="${zone}" and termin>=date'${todayStr}'`,
+        order_by: 'termin',
+        limit: '100'
+      });
+      const apiUrl = `https://data.bs.ch/api/explore/v2.1/catalog/datasets/100096/records?${params}`;
       
       try {
         console.log('Lade Abfuhrdaten von API:', apiUrl);
@@ -466,8 +470,9 @@ app.get('/api/abfuhr', async (req, res) => {
       
       // Typ-Filter: Prüfe ob einer der showTypes im art-Feld enthalten ist
       // API liefert z.B. "Papierabfuhr", "Kehrichtabfuhr", etc.
-      const typeMatches = showTypes.some(type => 
-        item.type.toLowerCase().includes(type.toLowerCase())
+      // "Grüngut" heisst in der API "Grünabfuhr"
+      const typeMatches = showTypes.some(type =>
+        item.type.toLowerCase().includes(type.toLowerCase().replace('grüngut', 'grün'))
       );
       
       return isCurrentOrFuture && typeMatches;
