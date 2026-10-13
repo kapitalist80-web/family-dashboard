@@ -1,0 +1,26 @@
+# Systemd-Unit fuer den Stundenplan-Server
+# Installation:
+#   sudo cp aris-stundenplan.service /etc/systemd/system/
+#   sudo systemctl daemon-reload
+#   sudo systemctl enable --now aris-stundenplan
+# Pfade und Benutzer ggf. anpassen (Standard: Benutzer "pi").
+
+[Unit]
+Description=Stundenplan- und Kalenderanzeige
+After=network-online.target
+Wants=network-online.target
+
+[Service]
+Type=simple
+User=pi
+WorkingDirectory=/home/pi/aris-stundenplan
+Environment=NODE_ENV=production
+Environment=TZ=Europe/Zurich
+ExecStart=/usr/bin/node server.js
+Restart=always
+RestartSec=10
+StandardOutput=journal
+StandardError=journal
+
+[Install]
+WantedBy=multi-user.target

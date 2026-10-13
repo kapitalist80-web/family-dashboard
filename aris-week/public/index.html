@@ -1,0 +1,47 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=800, height=480, initial-scale=1.0, user-scalable=no">
+  <meta name="theme-color" content="#0b1220">
+  <title>Stundenplan &amp; Kalender</title>
+  <link rel="icon" type="image/svg+xml" href="/favicon.svg">
+  <link rel="stylesheet" href="/css/dashboard.css">
+</head>
+<body>
+  <div class="app">
+    <header class="topbar">
+      <div class="child">
+        <span class="dot" id="childDot"></span>
+        <h1 id="childName">&nbsp;</h1>
+      </div>
+      <div class="weekinfo">
+        <div class="range" id="weekRange">Woche wird geladen …</div>
+        <div class="kw" id="weekNumber"></div>
+      </div>
+      <div class="clock">
+        <div class="time" id="clock">--:--</div>
+        <div class="today" id="todayLabel"></div>
+      </div>
+      <nav class="nav">
+        <button type="button" id="prevWeek" title="Woche zurück">&#8249;</button>
+        <button type="button" id="currentWeek" class="hidden" title="Aktuelle Woche">Heute</button>
+        <button type="button" id="nextWeek" title="Woche vor">&#8250;</button>
+      </nav>
+    </header>
+
+    <main class="week" id="week"></main>
+
+    <footer class="status">
+      <span id="statusText">Verbinde …</span>
+      <span class="warn" id="statusWarn"></span>
+      <span class="spacer"></span>
+      <a href="/settings" title="Einstellungen">&#9881;</a>
+    </footer>
+  </div>
+
+  <div class="night" id="night"></div>
+
+  <script src="/js/dashboard.js"></script>
+</body>
+</html>

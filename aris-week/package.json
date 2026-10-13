@@ -1,0 +1,21 @@
+{
+  "name": "aris-stundenplan",
+  "version": "1.0.0",
+  "description": "Wochenansicht mit Stundenplan und Kalender fuer Aris auf dem Raspberry Pi 7\" Touch Display (V1.1, 800x480)",
+  "main": "server.js",
+  "license": "MIT",
+  "engines": {
+    "node": ">=18"
+  },
+  "scripts": {
+    "start": "node server.js",
+    "dev": "node --watch server.js",
+    "test": "node --test tests/*.test.js"
+  },
+  "dependencies": {
+    "dotenv": "^16.4.5",
+    "express": "^4.19.2",
+    "node-ical": "^0.20.1",
+    "rrule": "^2.8.1"
+  }
+}
