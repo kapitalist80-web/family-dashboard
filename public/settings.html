@@ -142,6 +142,29 @@
             <div id="childrenList" style="margin-top: 20px;"></div>
         </div>
 
+        <!-- Finanzmärkte-Einstellungen -->
+        <div class="section">
+            <h2>📈 Finanzmärkte</h2>
+            <div class="info-box">
+                <h3>Ticker konfigurieren</h3>
+                <p>
+                    Bis zu 6 Ticker im Format von <a href="https://finance.yahoo.com" target="_blank">Yahoo Finance</a>,
+                    z.B. <code>^SSMI</code> (SMI), <code>^GSPC</code> (S&amp;P 500), <code>NESN.SW</code> (Nestlé),
+                    <code>AAPL</code>, <code>EURCHF=X</code>, <code>BTC-USD</code>. Der Name ist optional.
+                    Angezeigt werden aktueller Kurs sowie die Veränderung heute und seit Jahresbeginn (YTD).
+                </p>
+            </div>
+            <div class="form-group">
+                <label><input type="checkbox" id="marketsEnabled" checked> Finanzmärkte auf Dashboard anzeigen</label>
+            </div>
+            <div id="marketsTickers"></div>
+            <button onclick="saveMarketsSettings()">Finanzmärkte-Einstellungen speichern</button>
+            <div class="preview-box">
+                <h4>📈 Aktuelle Kurse</h4>
+                <div id="marketsPreviewContent">Lade Vorschau...</div>
+            </div>
+        </div>
+
         <!-- Wetter-Einstellungen -->
         <div class="section">
             <h2>🌤️ Wetter-Einstellungen</h2>
@@ -279,10 +302,15 @@
                     document.getElementById('scheduleEnabled').checked = config.schedule.enabled !== false;
                 }
 
+                // Finanzmärkte-Einstellungen
+                document.getElementById('marketsEnabled').checked = config.markets?.enabled !== false;
+                renderMarketsTickers();
+
                 renderChildren();
                 renderCalendars();
                 renderImageSources();
                 loadAbfuhrPreview();
+                loadMarketsPreview();
             } catch (error) {
                 console.error('Fehler beim Laden der Konfiguration:', error);
             }
@@ -314,6 +342,73 @@
                 `).join('') + `<div style="font-size: 11px; opacity: 0.5; margin-top: 10px;">Zone ${data.zone} | Aktualisiert: ${data.lastUpdate ? new Date(data.lastUpdate).toLocaleString('de-CH') : 'Nie'}</div>`;
             } catch (error) {
                 document.getElementById('abfuhrPreviewContent').innerHTML = '<div style="color: #f87171;">Fehler beim Laden der Vorschau</div>';
+            }
+        }
+
+        // ========== Finanzmärkte ==========
+
+        const MAX_MARKET_TICKERS = 6;
+
+        function renderMarketsTickers() {
+            const tickers = config.markets?.tickers || [];
+            let html = '';
+            for (let i = 0; i < MAX_MARKET_TICKERS; i++) {
+                const t = tickers[i] || {};
+                html += `
+                    <div class="grid">
+                        <div class="form-group"><label>Ticker ${i + 1}</label><input type="text" id="marketSymbol${i}" value="${t.symbol || ''}" placeholder="z.B. ^SSMI"></div>
+                        <div class="form-group"><label>Name</label><input type="text" id="marketName${i}" value="${t.name || ''}" placeholder="z.B. SMI"></div>
+                    </div>`;
+            }
+            document.getElementById('marketsTickers').innerHTML = html;
+        }
+
+        async function saveMarketsSettings() {
+            const tickers = [];
+            for (let i = 0; i < MAX_MARKET_TICKERS; i++) {
+                const symbol = document.getElementById(`marketSymbol${i}`).value.trim();
+                const name = document.getElementById(`marketName${i}`).value.trim();
+                if (symbol) tickers.push({ symbol, name });
+            }
+            try {
+                const response = await fetch(`${API_BASE}/api/markets/config`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                        enabled: document.getElementById('marketsEnabled').checked,
+                        tickers
+                    })
+                });
+                const data = await response.json();
+                config.markets = data.markets;
+                renderMarketsTickers();
+                showSuccess('Finanzmärkte-Einstellungen gespeichert');
+                loadMarketsPreview();
+            } catch (error) { showError('Fehler beim Speichern'); }
+        }
+
+        async function loadMarketsPreview() {
+            const container = document.getElementById('marketsPreviewContent');
+            try {
+                const response = await fetch(`${API_BASE}/api/markets`);
+                const data = await response.json();
+                if (!data.enabled || !data.quotes || data.quotes.length === 0) {
+                    container.innerHTML = '<div style="opacity: 0.6;">Keine Ticker konfiguriert oder deaktiviert.</div>';
+                    return;
+                }
+                const fmt = v => v == null ? '–' : `<span style="color: ${v > 0 ? '#4ade80' : v < 0 ? '#f87171' : 'inherit'};">${v > 0 ? '+' : ''}${v.toFixed(2)}%</span>`;
+                container.innerHTML = data.quotes.map(q => `
+                    <div class="preview-item">
+                        <span style="flex: 1; font-weight: 600;">${q.name} <span style="opacity: 0.5; font-weight: 400; font-size: 12px;">${q.symbol}</span></span>
+                        ${q.error
+                            ? '<span style="color: #f87171;">Ticker nicht gefunden</span>'
+                            : `<span>${q.price.toLocaleString('de-CH', { maximumFractionDigits: 4 })} ${q.currency}</span>
+                               <span style="min-width: 80px; text-align: right;">Heute ${fmt(q.changeToday)}</span>
+                               <span style="min-width: 80px; text-align: right;">YTD ${fmt(q.changeYtd)}</span>`}
+                    </div>
+                `).join('');
+            } catch (error) {
+                container.innerHTML = '<div style="color: #f87171;">Fehler beim Laden der Vorschau</div>';
             }
         }
 

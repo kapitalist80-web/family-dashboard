@@ -14,6 +14,16 @@ app.use(cors());
 app.use(bodyParser.json());
 app.use(express.static('public'));
 
+// Standard-Ticker für das Finanzmarkt-Panel (Yahoo-Finance-Symbole)
+const DEFAULT_MARKET_TICKERS = [
+  { symbol: '^SSMI', name: 'SMI' },
+  { symbol: '^GSPC', name: 'S&P 500' },
+  { symbol: '^GDAXI', name: 'DAX' },
+  { symbol: 'EURCHF=X', name: 'EUR/CHF' },
+  { symbol: 'USDCHF=X', name: 'USD/CHF' },
+  { symbol: 'BTC-USD', name: 'Bitcoin' }
+];
+
 // Konfiguration aus Datei laden oder Standard verwenden
 let config = {
   weather: {
@@ -62,6 +72,11 @@ let config = {
     //   }
     // }
   },
+  // NEU: Finanzmärkte (Kurse via Yahoo Finance)
+  markets: {
+    enabled: true,
+    tickers: DEFAULT_MARKET_TICKERS
+  },
   display: {
     locale: process.env.LOCALE || 'de-CH',
     timezone: process.env.TIMEZONE || 'Europe/Zurich'
@@ -87,6 +102,10 @@ function loadConfig() {
       // Stelle sicher, dass schedule-Konfiguration existiert
       if (!config.schedule) {
         config.schedule = { enabled: true, children: [] };
+      }
+      // Stelle sicher, dass markets-Konfiguration existiert
+      if (!config.markets) {
+        config.markets = { enabled: true, tickers: DEFAULT_MARKET_TICKERS };
       }
       console.log('Konfiguration geladen aus config.json');
     }
@@ -696,6 +715,124 @@ app.put('/api/schedule/child/:id', (req, res) => {
 
 // ============================================
 // Ende Stundenplan-API
+// ============================================
+
+// ============================================
+// NEU: Finanzmärkte-API (Yahoo Finance)
+// ============================================
+
+const MAX_MARKET_TICKERS = 6;
+
+// Cache pro Symbol (5 Minuten)
+const marketsCache = {};
+const MARKETS_CACHE_TIME = 5 * 60 * 1000;
+
+// Kursdaten eines Symbols laden: aktueller Kurs, %-Änderung heute und YTD
+async function fetchMarketQuote(symbol) {
+  const cached = marketsCache[symbol];
+  if (cached && (Date.now() - cached.time) < MARKETS_CACHE_TIME) {
+    return cached.data;
+  }
+
+  const fetch = (await import('node-fetch')).default;
+  const url = `https://query1.finance.yahoo.com/v8/finance/chart/${encodeURIComponent(symbol)}?range=ytd&interval=1d`;
+  const response = await fetch(url, {
+    timeout: 15000,
+    headers: { 'User-Agent': 'Mozilla/5.0 (FamilyDashboard/1.1)' }
+  });
+  if (!response.ok) {
+    throw new Error(`HTTP ${response.status}`);
+  }
+
+  const json = await response.json();
+  const result = json.chart && json.chart.result && json.chart.result[0];
+  if (!result || !result.meta || result.meta.regularMarketPrice == null) {
+    throw new Error('Keine Kursdaten');
+  }
+
+  const meta = result.meta;
+  const price = meta.regularMarketPrice;
+  // chartPreviousClose = letzter Schlusskurs vor Beginn des Zeitraums (= Jahresende Vorjahr)
+  const yearStartClose = meta.chartPreviousClose;
+
+  // Vortages-Schlusskurs: letzter Tagesbalken vor dem Handelstag des aktuellen Kurses
+  // (Tagesvergleich in der Zeitzone der Börse)
+  const offset = meta.gmtoffset || 0;
+  const dayOf = ts => Math.floor((ts + offset) / 86400);
+  const currentDay = dayOf(meta.regularMarketTime);
+  const timestamps = result.timestamp || [];
+  const closes = (result.indicators && result.indicators.quote && result.indicators.quote[0].close) || [];
+  let previousClose = null;
+  for (let i = timestamps.length - 1; i >= 0; i--) {
+    if (closes[i] != null && dayOf(timestamps[i]) < currentDay) {
+      previousClose = closes[i];
+      break;
+    }
+  }
+  // Erster Handelstag im Jahr: Vortag ist der Jahresendkurs
+  if (previousClose == null) previousClose = yearStartClose;
+
+  const pct = (from) => (from ? ((price - from) / from) * 100 : null);
+  const data = {
+    symbol: meta.symbol || symbol,
+    currency: meta.currency || '',
+    price,
+    changeToday: pct(previousClose),
+    changeYtd: pct(yearStartClose),
+    marketTime: meta.regularMarketTime ? new Date(meta.regularMarketTime * 1000).toISOString() : null
+  };
+
+  marketsCache[symbol] = { data, time: Date.now() };
+  return data;
+}
+
+// Kurse aller konfigurierten Ticker abrufen
+app.get('/api/markets', async (req, res) => {
+  try {
+    if (!config.markets || !config.markets.enabled) {
+      return res.json({ enabled: false, quotes: [] });
+    }
+
+    const tickers = (config.markets.tickers || []).filter(t => t.symbol).slice(0, MAX_MARKET_TICKERS);
+    const quotes = await Promise.all(tickers.map(async ticker => {
+      try {
+        const quote = await fetchMarketQuote(ticker.symbol);
+        return { ...quote, name: ticker.name || ticker.symbol };
+      } catch (err) {
+        console.error(`Fehler beim Laden von ${ticker.symbol}:`, err.message);
+        return { symbol: ticker.symbol, name: ticker.name || ticker.symbol, error: true };
+      }
+    }));
+
+    res.json({ enabled: true, quotes, lastUpdate: new Date().toISOString() });
+  } catch (error) {
+    console.error('Finanzmärkte-Fehler:', error);
+    res.status(500).json({ error: 'Fehler beim Abrufen der Finanzdaten' });
+  }
+});
+
+// Finanzmärkte-Konfiguration aktualisieren
+app.post('/api/markets/config', (req, res) => {
+  const { enabled, tickers } = req.body;
+
+  if (!config.markets) {
+    config.markets = { enabled: true, tickers: [] };
+  }
+
+  if (typeof enabled !== 'undefined') config.markets.enabled = enabled;
+  if (Array.isArray(tickers)) {
+    config.markets.tickers = tickers
+      .map(t => ({ symbol: String(t.symbol || '').trim().toUpperCase(), name: String(t.name || '').trim() }))
+      .filter(t => t.symbol)
+      .slice(0, MAX_MARKET_TICKERS);
+  }
+
+  saveConfig();
+  res.json({ success: true, markets: config.markets });
+});
+
+// ============================================
+// Ende Finanzmärkte-API
 // ============================================
 
 // Konfiguration abrufen

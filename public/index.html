@@ -452,6 +452,99 @@
             text-align: right;
         }
 
+        /* Finanzmärkte - unten rechts */
+        .markets-panel {
+            position: fixed;
+            bottom: 80px;
+            right: 20px;
+            width: 340px;
+            background: rgba(0,0,0,0.5);
+            backdrop-filter: blur(8px);
+            border-radius: 12px;
+            padding: 12px 15px;
+            z-index: 6;
+            display: none;
+        }
+
+        .markets-panel.visible {
+            display: block;
+        }
+
+        /* ÖV-Panel macht Platz, wenn Finanzmärkte sichtbar */
+        body.has-markets .transport-panel {
+            right: 375px;
+        }
+
+        .markets-header {
+            font-size: 0.9rem;
+            font-weight: 600;
+            margin-bottom: 8px;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            color: #60a5fa;
+        }
+
+        .markets-header::before {
+            content: "📈";
+        }
+
+        .markets-table {
+            width: 100%;
+            border-collapse: collapse;
+            font-size: 0.8rem;
+        }
+
+        .markets-table th {
+            font-size: 0.65rem;
+            font-weight: 500;
+            opacity: 0.6;
+            text-align: right;
+            padding: 0 0 4px 8px;
+            text-transform: uppercase;
+            letter-spacing: 0.03em;
+        }
+
+        .markets-table th:first-child,
+        .markets-table td:first-child {
+            text-align: left;
+            padding-left: 0;
+        }
+
+        .markets-table td {
+            padding: 4px 0 4px 8px;
+            text-align: right;
+            white-space: nowrap;
+            border-top: 1px solid rgba(255,255,255,0.08);
+            font-variant-numeric: tabular-nums;
+        }
+
+        .market-name {
+            font-weight: 600;
+            max-width: 110px;
+            overflow: hidden;
+            text-overflow: ellipsis;
+        }
+
+        .market-currency {
+            font-size: 0.65rem;
+            opacity: 0.6;
+            margin-left: 3px;
+        }
+
+        .market-change.up {
+            color: #4ade80;
+        }
+
+        .market-change.down {
+            color: #f87171;
+        }
+
+        .market-error {
+            opacity: 0.5;
+            font-style: italic;
+        }
+
         /* Kalender */
         .calendar {
             flex: 0 1 auto;
@@ -465,19 +558,12 @@
             z-index: 1;
         }
 
-        .month-header {
-            font-size: 2rem;
-            text-align: center;
-            margin-bottom: 20px;
-            text-shadow: 1px 1px 4px rgba(0,0,0,0.8);
-        }
-
         .calendar-grid {
             display: grid;
             grid-template-columns: repeat(7, 1fr);
             grid-template-rows: auto repeat(2, 1fr);
             gap: 2px;
-            height: calc(100% - 60px);
+            height: 100%;
         }
 
         .weekday-header {
@@ -558,6 +644,11 @@
             display: block;
         }
 
+        /* Stundenplan macht rechts Platz für das Finanzmärkte-Panel */
+        body.has-markets .schedule-panel {
+            margin-right: 355px;
+        }
+
         .schedule-header {
             font-size: 0.85rem;
             font-weight: 600;
@@ -581,8 +672,9 @@
 
         .schedule-row {
             display: flex;
+            flex-wrap: wrap;
             align-items: center;
-            gap: 10px;
+            gap: 3px 10px;
             padding: 4px 0;
             font-size: 0.8rem;
             border-bottom: 1px solid rgba(255,255,255,0.06);
@@ -607,8 +699,7 @@
         .schedule-subjects {
             display: flex;
             gap: 4px;
-            flex-wrap: nowrap;
-            overflow: hidden;
+            flex-wrap: wrap;
         }
 
         .schedule-subject {
@@ -683,7 +774,6 @@
         </div>
 
         <div class="calendar">
-            <div class="month-header" id="monthHeader">November 2025</div>
             <div class="calendar-grid" id="calendarGrid"></div>
         </div>
 
@@ -703,6 +793,17 @@
                 <div style="opacity: 0.6; font-size: 0.9rem;">Lade Abfahrten...</div>
             </div>
         </div>
+    </div>
+
+    <!-- Finanzmärkte Panel (unten rechts) -->
+    <div class="markets-panel" id="marketsPanel">
+        <div class="markets-header">Finanzmärkte</div>
+        <table class="markets-table">
+            <thead>
+                <tr><th></th><th>Kurs</th><th>Heute</th><th>YTD</th></tr>
+            </thead>
+            <tbody id="marketsContent"></tbody>
+        </table>
     </div>
 
     <!-- News Ticker -->
@@ -922,15 +1023,6 @@
             const weekStart = new Date(now);
             weekStart.setDate(now.getDate() + diff);
             weekStart.setHours(0, 0, 0, 0);
-            
-            // Ende der zweiten Woche
-            const weekEnd = new Date(weekStart);
-            weekEnd.setDate(weekStart.getDate() + 13);
-            
-            // Header mit Datumsbereich
-            const startStr = weekStart.toLocaleDateString('de-CH', { day: 'numeric', month: 'long' });
-            const endStr = weekEnd.toLocaleDateString('de-CH', { day: 'numeric', month: 'long', year: 'numeric' });
-            document.getElementById('monthHeader').textContent = `${startStr} - ${endStr}`;
 
             const grid = document.getElementById('calendarGrid');
             grid.innerHTML = '';
@@ -1249,6 +1341,57 @@
             }
         }
 
+        // Finanzmärkte laden
+        function formatPrice(value) {
+            const digits = value >= 1000 ? 0 : value >= 10 ? 2 : 4;
+            return value.toLocaleString('de-CH', { minimumFractionDigits: digits, maximumFractionDigits: digits });
+        }
+
+        function formatChange(value) {
+            if (value == null) return '<span class="market-change">–</span>';
+            const cls = value > 0 ? 'up' : value < 0 ? 'down' : '';
+            const sign = value > 0 ? '+' : '';
+            return `<span class="market-change ${cls}">${sign}${value.toFixed(2)}%</span>`;
+        }
+
+        async function loadMarkets() {
+            try {
+                const response = await fetch(`${API_BASE}/api/markets`);
+                const data = await response.json();
+
+                const panel = document.getElementById('marketsPanel');
+                if (!data.enabled || !data.quotes || data.quotes.length === 0) {
+                    panel.classList.remove('visible');
+                    document.body.classList.remove('has-markets');
+                    return;
+                }
+
+                document.getElementById('marketsContent').innerHTML = data.quotes.map(q => {
+                    if (q.error) {
+                        return `
+                            <tr>
+                                <td class="market-name">${q.name}</td>
+                                <td colspan="3" class="market-error">nicht verfügbar</td>
+                            </tr>
+                        `;
+                    }
+                    return `
+                        <tr>
+                            <td class="market-name">${q.name}</td>
+                            <td>${formatPrice(q.price)}<span class="market-currency">${q.currency}</span></td>
+                            <td>${formatChange(q.changeToday)}</td>
+                            <td>${formatChange(q.changeYtd)}</td>
+                        </tr>
+                    `;
+                }).join('');
+
+                panel.classList.add('visible');
+                document.body.classList.add('has-markets');
+            } catch (error) {
+                console.error('Fehler beim Laden der Finanzdaten:', error);
+            }
+        }
+
         // Initialisierung
         updateTime();
         setInterval(updateTime, 1000);
@@ -1269,6 +1412,10 @@
 
         loadTransport();
         setInterval(loadTransport, 60 * 1000);
+
+        // Finanzmärkte laden
+        loadMarkets();
+        setInterval(loadMarkets, 5 * 60 * 1000); // Alle 5 Minuten aktualisieren
 
         loadImages().then(() => {
             if (images.length > 0) {
